@@ -1,5 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Filter, MessageSquare, Search, X } from 'lucide-react';
+import {
+  ArrowDown,
+  ArrowUpDown,
+  Filter,
+  MessageSquare,
+  Search,
+  X,
+} from 'lucide-react';
 import type { ArchiveMessage, MessageFile } from '../types';
 import { formatDateDivider } from '../utils/format';
 import { MessageItem } from './MessageItem';
@@ -7,6 +14,7 @@ import { MessageItem } from './MessageItem';
 interface MessageListProps {
   channelId: string;
   month: string;
+  isLatestMonth: boolean;
   messages: ArchiveMessage[];
   highlightTs?: string;
   activeThreadTs?: string;
@@ -32,6 +40,7 @@ function shouldGroupWithPrevious(
 export const MessageList: React.FC<MessageListProps> = ({
   channelId,
   month,
+  isLatestMonth,
   messages,
   highlightTs,
   activeThreadTs,
@@ -41,6 +50,7 @@ export const MessageList: React.FC<MessageListProps> = ({
 }) => {
   const [localFilter, setLocalFilter] = useState('');
   const [showHiddenReplies, setShowHiddenReplies] = useState(false);
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const containerRef = useRef<HTMLDivElement>(null);
 
   const hiddenReplyCount = useMemo(
@@ -60,7 +70,7 @@ export const MessageList: React.FC<MessageListProps> = ({
 
   const visibleMessages = useMemo(() => {
     const q = localFilter.trim().toLowerCase();
-    return messages.filter((m) => {
+    const filtered = messages.filter((m) => {
       if (!showHiddenReplies && m.isThreadReply && !m.isThreadBroadcast) {
         return false;
       }
@@ -72,7 +82,13 @@ export const MessageList: React.FC<MessageListProps> = ({
         m.replies.some((r) => r.text.toLowerCase().includes(q))
       );
     });
-  }, [messages, showHiddenReplies, localFilter]);
+
+    return [...filtered].sort((a, b) =>
+      sortOrder === 'asc'
+        ? Number(a.ts) - Number(b.ts)
+        : Number(b.ts) - Number(a.ts)
+    );
+  }, [messages, showHiddenReplies, localFilter, sortOrder]);
 
   // Group by date
   const dateGroups = useMemo(() => {
@@ -88,7 +104,7 @@ export const MessageList: React.FC<MessageListProps> = ({
     return groups;
   }, [visibleMessages]);
 
-  // Scroll to highlighted message or bottom/top appropriately
+  // Scroll to highlighted message
   useEffect(() => {
     if (!highlightTs) return;
     const timer = setTimeout(() => {
@@ -102,23 +118,69 @@ export const MessageList: React.FC<MessageListProps> = ({
     return () => clearTimeout(timer);
   }, [highlightTs, visibleMessages]);
 
-  // Reset local filter when switching channel/month
+  // Reset local filter and scroll to bottom (latest) on latest month, or top on archived months
   useEffect(() => {
     setLocalFilter('');
-    if (!highlightTs) {
-      containerRef.current?.scrollTo({ top: 0 });
+    if (highlightTs) return;
+    const el = containerRef.current;
+    if (!el) return;
+    const timer = setTimeout(() => {
+      if (isLatestMonth && sortOrder === 'asc') {
+        el.scrollTo({ top: el.scrollHeight });
+      } else {
+        el.scrollTo({ top: 0 });
+      }
+    }, 30);
+    return () => clearTimeout(timer);
+  }, [channelId, month, isLatestMonth, highlightTs, sortOrder]);
+
+  const scrollToLatest = () => {
+    const el = containerRef.current;
+    if (!el) return;
+    if (sortOrder === 'asc') {
+      el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+    } else {
+      el.scrollTo({ top: 0, behavior: 'smooth' });
     }
-  }, [channelId, month, highlightTs]);
+  };
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      {/* Sub-toolbar: in-month quick filter & hidden thread reply toggle */}
+      {/* Sub-toolbar: in-month quick filter, sort toggle, hidden thread reply toggle */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--slack-border)] bg-[var(--slack-surface-bg)] px-5 py-1.5 text-xs">
-        <div className="flex items-center gap-2 text-[var(--slack-text-muted)]">
+        <div className="flex flex-wrap items-center gap-2 text-[var(--slack-text-muted)]">
           <span>
-            Showing <strong className="text-[var(--slack-text)]">{visibleMessages.length}</strong>{' '}
+            Showing{' '}
+            <strong className="text-[var(--slack-text)]">
+              {visibleMessages.length}
+            </strong>{' '}
             messages in <span className="font-mono-code">{month}</span>
           </span>
+
+          <button
+            type="button"
+            onClick={() =>
+              setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'))
+            }
+            className="inline-flex items-center gap-1 rounded-full border border-[var(--slack-border)] bg-[var(--slack-main-bg)] px-2 py-0.5 text-[var(--slack-text-muted)] transition hover:text-[var(--slack-text)]"
+            title="Toggle chronological order"
+          >
+            <ArrowUpDown className="h-3 w-3" />
+            {sortOrder === 'asc' ? 'Oldest → Latest' : 'Latest → Oldest'}
+          </button>
+
+          {sortOrder === 'asc' && visibleMessages.length > 5 && (
+            <button
+              type="button"
+              onClick={scrollToLatest}
+              className="inline-flex items-center gap-1 rounded-full border border-[var(--slack-border)] bg-[var(--slack-main-bg)] px-2 py-0.5 text-[var(--slack-link)] transition hover:bg-[var(--slack-badge-bg)]"
+              title="Scroll to latest message"
+            >
+              <ArrowDown className="h-3 w-3" />
+              Latest
+            </button>
+          )}
+
           {hiddenReplyCount > 0 && (
             <button
               type="button"
@@ -160,7 +222,10 @@ export const MessageList: React.FC<MessageListProps> = ({
       </div>
 
       {/* Scrollable feed */}
-      <div ref={containerRef} className="slack-scroll min-h-0 flex-1 overflow-y-auto pb-8">
+      <div
+        ref={containerRef}
+        className="slack-scroll min-h-0 flex-1 overflow-y-auto pb-8"
+      >
         {dateGroups.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center px-6 py-16 text-center text-[var(--slack-text-muted)]">
             <MessageSquare className="mb-3 h-10 w-10 opacity-40" />
@@ -188,7 +253,10 @@ export const MessageList: React.FC<MessageListProps> = ({
                   message={msg}
                   channelId={channelId}
                   month={month}
-                  compact={shouldGroupWithPrevious(group.items[idx - 1], msg)}
+                  compact={
+                    sortOrder === 'asc' &&
+                    shouldGroupWithPrevious(group.items[idx - 1], msg)
+                  }
                   isHighlighted={highlightTs === msg.ts}
                   isThreadOpen={activeThreadTs === msg.ts}
                   onOpenThread={onOpenThread}

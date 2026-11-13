@@ -349,6 +349,7 @@ export const App: React.FC = () => {
                   <MessageList
                     channelId={channelDetail.channelId}
                     month={channelDetail.activeMonth}
+                    isLatestMonth={!channelDetail.nextMonth}
                     messages={channelDetail.messages}
                     highlightTs={highlightTs}
                     activeThreadTs={activeThread?.ts}

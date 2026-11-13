@@ -1,0 +1,134 @@
+@import "tailwindcss";
+
+:root {
+  --slack-sidebar-bg: #3f0e40;
+  --slack-sidebar-hover: #350d36;
+  --slack-sidebar-active: #1164a3;
+  --slack-sidebar-text: #cfc3cf;
+  --slack-sidebar-text-bright: #ffffff;
+  --slack-sidebar-border: rgba(255, 255, 255, 0.12);
+  --slack-top-bg: #350d36;
+
+  --slack-main-bg: #ffffff;
+  --slack-surface-bg: #f8f8fa;
+  --slack-surface-hover: #f8f8f8;
+  --slack-border: #e5e5e7;
+  --slack-text: #1d1c1d;
+  --slack-text-muted: #616061;
+  --slack-link: #1264a3;
+  --slack-accent: #1164a3;
+  --slack-badge-bg: #f2f2f4;
+  --slack-highlight-bg: #fff8dc;
+}
+
+html.dark {
+  --slack-sidebar-bg: #19171d;
+  --slack-sidebar-hover: #27242c;
+  --slack-sidebar-active: #1164a3;
+  --slack-sidebar-text: #ababad;
+  --slack-sidebar-text-bright: #ffffff;
+  --slack-sidebar-border: rgba(255, 255, 255, 0.08);
+  --slack-top-bg: #121016;
+
+  --slack-main-bg: #1a1d21;
+  --slack-surface-bg: #222529;
+  --slack-surface-hover: #222529;
+  --slack-border: #35373b;
+  --slack-text: #d1d2d3;
+  --slack-text-muted: #9a9b9e;
+  --slack-link: #1d9bd1;
+  --slack-accent: #1d9bd1;
+  --slack-badge-bg: #2c2d30;
+  --slack-highlight-bg: rgba(232, 168, 56, 0.14);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  font-family: 'Inter', 'Noto Sans TC', -apple-system, BlinkMacSystemFont,
+    'Segoe UI', Roboto, sans-serif;
+  background-color: var(--slack-main-bg);
+  color: var(--slack-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+.font-mono-code {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* Rendered Slack Archive HTML styling */
+.slack-html {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+}
+
+.slack-html a {
+  color: var(--slack-link);
+  text-decoration: none;
+}
+
+.slack-html a:hover {
+  text-decoration: underline;
+}
+
+.slack-html b {
+  font-weight: 600;
+  color: var(--slack-link);
+  background-color: color-mix(in srgb, var(--slack-link) 10%, transparent);
+  padding: 0 3px;
+  border-radius: 3px;
+}
+
+.slack-html img {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  vertical-align: -4px;
+  object-fit: contain;
+}
+
+.reaction-emoji img {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  vertical-align: middle;
+  object-fit: contain;
+}
+
+/* Custom subtle scrollbars */
+.slack-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.slack-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.slack-scroll::-webkit-scrollbar-thumb {
+  background: rgba(128, 128, 128, 0.3);
+  border-radius: 9999px;
+}
+
+.slack-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(128, 128, 128, 0.5);
+}
+
+@keyframes flash-highlight {
+  0% {
+    background-color: var(--slack-highlight-bg);
+  }
+  70% {
+    background-color: var(--slack-highlight-bg);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.message-flash {
+  animation: flash-highlight 2.8s ease-out;
+}

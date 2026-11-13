@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,
   ExternalLink,
@@ -68,6 +68,21 @@ function parseLocation(): RouteState {
   };
 }
 
+function mergeMessages(
+  existing: ArchiveMessage[],
+  incoming: ArchiveMessage[]
+): ArchiveMessage[] {
+  const map = new Map<string, ArchiveMessage>();
+  for (const m of existing) map.set(m.ts, m);
+  for (const m of incoming) {
+    const prev = map.get(m.ts);
+    if (!prev || m.replies.length >= prev.replies.length) {
+      map.set(m.ts, m);
+    }
+  }
+  return Array.from(map.values()).sort((a, b) => Number(a.ts) - Number(b.ts));
+}
+
 export const App: React.FC = () => {
   const initialRoute = useMemo(() => parseLocation(), []);
 
@@ -96,8 +111,16 @@ export const App: React.FC = () => {
 
   const [channelDetail, setChannelDetail] =
     useState<ChannelDetailResponse | null>(null);
+  const [loadedMonths, setLoadedMonths] = useState<string[]>([]);
+  const [loadedMessages, setLoadedMessages] = useState<ArchiveMessage[]>([]);
+  const [prevMonthToLoad, setPrevMonthToLoad] = useState<string | null>(null);
+  const [nextMonthToLoad, setNextMonthToLoad] = useState<string | null>(null);
+  const [loadingPrev, setLoadingPrev] = useState(false);
+  const [loadingNext, setLoadingNext] = useState(false);
+
   const [channelLoading, setChannelLoading] = useState(false);
   const [channelError, setChannelError] = useState<string | null>(null);
+  const sessionRef = useRef(0);
 
   const [activeThread, setActiveThread] = useState<ArchiveMessage | null>(null);
   const [showChannelInfo, setShowChannelInfo] = useState(false);
@@ -154,18 +177,29 @@ export const App: React.FC = () => {
 
   const loadChannel = useCallback(
     async (channelId: string, month?: string) => {
+      const mySession = ++sessionRef.current;
       setChannelLoading(true);
       setChannelError(null);
+      setLoadingPrev(false);
+      setLoadingNext(false);
       try {
         const data = await fetchChannelMessages(channelId, month);
+        if (sessionRef.current !== mySession) return;
         setChannelDetail(data);
+        setLoadedMonths([data.activeMonth]);
+        setLoadedMessages(data.messages);
+        setPrevMonthToLoad(data.previousMonth);
+        setNextMonthToLoad(data.nextMonth);
         setRecentIds(recordRecentChannel(channelId));
       } catch (err) {
+        if (sessionRef.current !== mySession) return;
         setChannelError(
           err instanceof Error ? err.message : 'Failed to load channel'
         );
       } finally {
-        setChannelLoading(false);
+        if (sessionRef.current === mySession) {
+          setChannelLoading(false);
+        }
       }
     },
     []
@@ -176,6 +210,50 @@ export const App: React.FC = () => {
     if (viewMode !== 'channel') return;
     loadChannel(activeChannelId, requestedMonth);
   }, [viewMode, activeChannelId, requestedMonth, loadChannel]);
+
+  const loadPrevMonth = useCallback(async () => {
+    if (!prevMonthToLoad || loadingPrev || channelLoading) return;
+    const mySession = sessionRef.current;
+    const targetMonth = prevMonthToLoad;
+    setLoadingPrev(true);
+    try {
+      const data = await fetchChannelMessages(activeChannelId, targetMonth);
+      if (sessionRef.current !== mySession) return;
+      setLoadedMessages((prev) => mergeMessages(prev, data.messages));
+      setLoadedMonths((prev) =>
+        Array.from(new Set([data.activeMonth, ...prev])).sort()
+      );
+      setPrevMonthToLoad(data.previousMonth);
+    } catch (err) {
+      console.warn('Failed to load previous month:', err);
+    } finally {
+      if (sessionRef.current === mySession) {
+        setLoadingPrev(false);
+      }
+    }
+  }, [activeChannelId, prevMonthToLoad, loadingPrev, channelLoading]);
+
+  const loadNextMonth = useCallback(async () => {
+    if (!nextMonthToLoad || loadingNext || channelLoading) return;
+    const mySession = sessionRef.current;
+    const targetMonth = nextMonthToLoad;
+    setLoadingNext(true);
+    try {
+      const data = await fetchChannelMessages(activeChannelId, targetMonth);
+      if (sessionRef.current !== mySession) return;
+      setLoadedMessages((prev) => mergeMessages(prev, data.messages));
+      setLoadedMonths((prev) =>
+        Array.from(new Set([...prev, data.activeMonth])).sort()
+      );
+      setNextMonthToLoad(data.nextMonth);
+    } catch (err) {
+      console.warn('Failed to load next month:', err);
+    } finally {
+      if (sessionRef.current === mySession) {
+        setLoadingNext(false);
+      }
+    }
+  }, [activeChannelId, nextMonthToLoad, loadingNext, channelLoading]);
 
   const navigateToChannel = useCallback(
     (channelId: string, month?: string, ts?: string) => {
@@ -225,6 +303,8 @@ export const App: React.FC = () => {
     setActiveThread(null);
     setShowChannelInfo((v) => !v);
   }, []);
+
+  const sessionKey = `${activeChannelId}:${channelDetail?.activeMonth ?? requestedMonth ?? 'latest'}`;
 
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden bg-[var(--slack-main-bg)] text-[var(--slack-text)]">
@@ -310,6 +390,7 @@ export const App: React.FC = () => {
               <ChannelHeader
                 summary={activeChannelSummary}
                 detail={channelDetail}
+                loadedMonths={loadedMonths}
                 loading={channelLoading}
                 isStarred={starredIds.includes(activeChannelId)}
                 showInfo={showChannelInfo}
@@ -347,12 +428,19 @@ export const App: React.FC = () => {
                     </div>
                   )}
                   <MessageList
+                    sessionKey={sessionKey}
                     channelId={channelDetail.channelId}
-                    month={channelDetail.activeMonth}
-                    isLatestMonth={!channelDetail.nextMonth}
-                    messages={channelDetail.messages}
+                    loadedMonths={loadedMonths}
+                    isLatestLoaded={!nextMonthToLoad}
+                    prevMonth={prevMonthToLoad}
+                    nextMonth={nextMonthToLoad}
+                    loadingPrev={loadingPrev}
+                    loadingNext={loadingNext}
+                    messages={loadedMessages}
                     highlightTs={highlightTs}
                     activeThreadTs={activeThread?.ts}
+                    onLoadPrev={loadPrevMonth}
+                    onLoadNext={loadNextMonth}
                     onOpenThread={handleOpenThread}
                     onNavigateChannel={navigateToChannel}
                     onPreviewFile={setPreviewFile}
@@ -368,7 +456,7 @@ export const App: React.FC = () => {
           <ThreadPanel
             channelId={channelDetail.channelId}
             channelName={channelDetail.channelName}
-            month={channelDetail.activeMonth}
+            month={activeThread.date.slice(0, 7) || channelDetail.activeMonth}
             message={activeThread}
             onClose={() => setActiveThread(null)}
             onNavigateChannel={navigateToChannel}

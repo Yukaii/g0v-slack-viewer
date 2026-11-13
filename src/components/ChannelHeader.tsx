@@ -16,6 +16,7 @@ import { RichContent } from './RichContent';
 interface ChannelHeaderProps {
   summary?: ChannelSummary;
   detail: ChannelDetailResponse | null;
+  loadedMonths?: string[];
   loading: boolean;
   isStarred: boolean;
   showInfo: boolean;
@@ -29,6 +30,7 @@ interface ChannelHeaderProps {
 export const ChannelHeader: React.FC<ChannelHeaderProps> = ({
   summary,
   detail,
+  loadedMonths = [],
   loading,
   isStarred,
   showInfo,
@@ -195,7 +197,7 @@ export const ChannelHeader: React.FC<ChannelHeaderProps> = ({
           {activeYearEntry && (
             <div className="slack-scroll flex items-center gap-1 overflow-x-auto pb-0.5">
               {activeYearEntry.months.map((m) => {
-                const isCurrent = m.month === detail.activeMonth;
+                const isCurrent = m.month === detail.activeMonth || loadedMonths.includes(m.month);
                 return (
                   <button
                     key={m.month}

@@ -1,8 +1,17 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   ArrowDown,
+  ArrowUp,
   ArrowUpDown,
   Filter,
+  Loader2,
   MessageSquare,
   Search,
   X,
@@ -12,12 +21,19 @@ import { formatDateDivider } from '../utils/format';
 import { MessageItem } from './MessageItem';
 
 interface MessageListProps {
+  sessionKey: string;
   channelId: string;
-  month: string;
-  isLatestMonth: boolean;
+  loadedMonths: string[];
+  isLatestLoaded: boolean;
+  prevMonth: string | null;
+  nextMonth: string | null;
+  loadingPrev: boolean;
+  loadingNext: boolean;
   messages: ArchiveMessage[];
   highlightTs?: string;
   activeThreadTs?: string;
+  onLoadPrev: () => void;
+  onLoadNext: () => void;
   onOpenThread: (message: ArchiveMessage) => void;
   onNavigateChannel: (channelId: string, month?: string, ts?: string) => void;
   onPreviewFile: (file: MessageFile) => void;
@@ -38,12 +54,19 @@ function shouldGroupWithPrevious(
 }
 
 export const MessageList: React.FC<MessageListProps> = ({
+  sessionKey,
   channelId,
-  month,
-  isLatestMonth,
+  loadedMonths,
+  isLatestLoaded,
+  prevMonth,
+  nextMonth,
+  loadingPrev,
+  loadingNext,
   messages,
   highlightTs,
   activeThreadTs,
+  onLoadPrev,
+  onLoadNext,
   onOpenThread,
   onNavigateChannel,
   onPreviewFile,
@@ -51,7 +74,15 @@ export const MessageList: React.FC<MessageListProps> = ({
   const [localFilter, setLocalFilter] = useState('');
   const [showHiddenReplies, setShowHiddenReplies] = useState(false);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
   const containerRef = useRef<HTMLDivElement>(null);
+  const initialReadyRef = useRef(false);
+  const lastAutoTriggerRef = useRef(0);
+  const prependAnchorRef = useRef<{
+    active: boolean;
+    scrollHeight: number;
+    scrollTop: number;
+  }>({ active: false, scrollHeight: 0, scrollTop: 0 });
 
   const hiddenReplyCount = useMemo(
     () =>
@@ -104,6 +135,18 @@ export const MessageList: React.FC<MessageListProps> = ({
     return groups;
   }, [visibleMessages]);
 
+  // Maintain scroll position when messages are prepended at the top
+  useLayoutEffect(() => {
+    const anchor = prependAnchorRef.current;
+    const el = containerRef.current;
+    if (!anchor.active || !el) return;
+    const delta = el.scrollHeight - anchor.scrollHeight;
+    if (delta > 0) {
+      el.scrollTop = anchor.scrollTop + delta;
+    }
+    anchor.active = false;
+  }, [visibleMessages]);
+
   // Scroll to highlighted message
   useEffect(() => {
     if (!highlightTs) return;
@@ -116,23 +159,111 @@ export const MessageList: React.FC<MessageListProps> = ({
       }
     }, 80);
     return () => clearTimeout(timer);
-  }, [highlightTs, visibleMessages]);
+  }, [highlightTs, sessionKey]);
 
-  // Reset local filter and scroll to bottom (latest) on latest month, or top on archived months
+  // Initial scroll behavior ONLY when switching channel/requested-month session (not on infinite-load append/prepend)
   useEffect(() => {
     setLocalFilter('');
-    if (highlightTs) return;
+    initialReadyRef.current = false;
+    prependAnchorRef.current.active = false;
+
+    if (highlightTs) {
+      const readyTimer = setTimeout(() => {
+        initialReadyRef.current = true;
+      }, 250);
+      return () => clearTimeout(readyTimer);
+    }
+
     const el = containerRef.current;
     if (!el) return;
     const timer = setTimeout(() => {
-      if (isLatestMonth && sortOrder === 'asc') {
+      if (isLatestLoaded && sortOrder === 'asc') {
         el.scrollTo({ top: el.scrollHeight });
       } else {
         el.scrollTo({ top: 0 });
       }
+      setTimeout(() => {
+        initialReadyRef.current = true;
+      }, 150);
     }, 30);
     return () => clearTimeout(timer);
-  }, [channelId, month, isLatestMonth, highlightTs, sortOrder]);
+  }, [sessionKey, sortOrder, highlightTs]);
+
+  const triggerTopLoad = useCallback(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const now = Date.now();
+    if (now - lastAutoTriggerRef.current < 450) return;
+
+    if (sortOrder === 'asc') {
+      if (!prevMonth || loadingPrev) return;
+      lastAutoTriggerRef.current = now;
+      prependAnchorRef.current = {
+        active: true,
+        scrollHeight: el.scrollHeight,
+        scrollTop: el.scrollTop,
+      };
+      onLoadPrev();
+    } else {
+      if (!nextMonth || loadingNext) return;
+      lastAutoTriggerRef.current = now;
+      prependAnchorRef.current = {
+        active: true,
+        scrollHeight: el.scrollHeight,
+        scrollTop: el.scrollTop,
+      };
+      onLoadNext();
+    }
+  }, [sortOrder, prevMonth, nextMonth, loadingPrev, loadingNext, onLoadPrev, onLoadNext]);
+
+  const triggerBottomLoad = useCallback(() => {
+    const now = Date.now();
+    if (now - lastAutoTriggerRef.current < 450) return;
+
+    if (sortOrder === 'asc') {
+      if (!nextMonth || loadingNext) return;
+      lastAutoTriggerRef.current = now;
+      onLoadNext();
+    } else {
+      if (!prevMonth || loadingPrev) return;
+      lastAutoTriggerRef.current = now;
+      onLoadPrev();
+    }
+  }, [sortOrder, prevMonth, nextMonth, loadingPrev, loadingNext, onLoadPrev, onLoadNext]);
+
+  const handleScroll = () => {
+    if (!initialReadyRef.current) return;
+    const el = containerRef.current;
+    if (!el) return;
+
+    // Near top -> load earlier (in asc) or newer (in desc)
+    if (el.scrollTop < 180) {
+      triggerTopLoad();
+      return;
+    }
+
+    // Near bottom -> load newer (in asc) or earlier (in desc)
+    const distToBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    if (distToBottom < 180) {
+      triggerBottomLoad();
+    }
+  };
+
+  // Also support wheel-up at top / wheel-down at bottom when a single month fits without a scrollbar
+  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    if (!initialReadyRef.current) return;
+    const el = containerRef.current;
+    if (!el) return;
+
+    if (e.deltaY < 0 && el.scrollTop <= 10) {
+      triggerTopLoad();
+    } else if (
+      e.deltaY > 0 &&
+      el.scrollHeight - el.scrollTop - el.clientHeight <= 10
+    ) {
+      triggerBottomLoad();
+    }
+  };
 
   const scrollToLatest = () => {
     const el = containerRef.current;
@@ -144,9 +275,20 @@ export const MessageList: React.FC<MessageListProps> = ({
     }
   };
 
+  const monthRangeLabel = useMemo(() => {
+    if (loadedMonths.length === 0) return '';
+    if (loadedMonths.length === 1) return loadedMonths[0];
+    return `${loadedMonths[0]} – ${loadedMonths[loadedMonths.length - 1]}`;
+  }, [loadedMonths]);
+
+  const topHasMore = sortOrder === 'asc' ? prevMonth : nextMonth;
+  const topLoading = sortOrder === 'asc' ? loadingPrev : loadingNext;
+  const bottomHasMore = sortOrder === 'asc' ? nextMonth : prevMonth;
+  const bottomLoading = sortOrder === 'asc' ? loadingNext : loadingPrev;
+
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      {/* Sub-toolbar: in-month quick filter, sort toggle, hidden thread reply toggle */}
+      {/* Sub-toolbar: loaded month range, sort toggle, quick jump, filter */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--slack-border)] bg-[var(--slack-surface-bg)] px-5 py-1.5 text-xs">
         <div className="flex flex-wrap items-center gap-2 text-[var(--slack-text-muted)]">
           <span>
@@ -154,7 +296,12 @@ export const MessageList: React.FC<MessageListProps> = ({
             <strong className="text-[var(--slack-text)]">
               {visibleMessages.length}
             </strong>{' '}
-            messages in <span className="font-mono-code">{month}</span>
+            messages{' '}
+            {monthRangeLabel && (
+              <>
+                in <span className="font-mono-code">{monthRangeLabel}</span>
+              </>
+            )}
           </span>
 
           <button
@@ -174,7 +321,7 @@ export const MessageList: React.FC<MessageListProps> = ({
               type="button"
               onClick={scrollToLatest}
               className="inline-flex items-center gap-1 rounded-full border border-[var(--slack-border)] bg-[var(--slack-main-bg)] px-2 py-0.5 text-[var(--slack-link)] transition hover:bg-[var(--slack-badge-bg)]"
-              title="Scroll to latest message"
+              title="Scroll to latest loaded message"
             >
               <ArrowDown className="h-3 w-3" />
               Latest
@@ -206,7 +353,7 @@ export const MessageList: React.FC<MessageListProps> = ({
             type="text"
             value={localFilter}
             onChange={(e) => setLocalFilter(e.target.value)}
-            placeholder="Filter this month..."
+            placeholder="Filter loaded messages..."
             className="w-44 rounded-md border border-[var(--slack-border)] bg-[var(--slack-main-bg)] py-1 pr-6 pl-7 text-xs text-[var(--slack-text)] placeholder:text-[var(--slack-text-muted)] focus:border-[var(--slack-accent)] focus:outline-none sm:w-56"
           />
           {localFilter && (
@@ -221,11 +368,39 @@ export const MessageList: React.FC<MessageListProps> = ({
         </div>
       </div>
 
-      {/* Scrollable feed */}
+      {/* Scrollable feed with infinite loading */}
       <div
         ref={containerRef}
+        onScroll={handleScroll}
+        onWheel={handleWheel}
         className="slack-scroll min-h-0 flex-1 overflow-y-auto pb-8"
       >
+        {/* Top infinite-load sentinel / control */}
+        <div className="flex items-center justify-center pt-3 pb-1">
+          {topLoading ? (
+            <div className="inline-flex items-center gap-2 rounded-full border border-[var(--slack-border)] bg-[var(--slack-surface-bg)] px-3.5 py-1 text-xs text-[var(--slack-text-muted)]">
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-[var(--slack-accent)]" />
+              <span>Loading {topHasMore}...</span>
+            </div>
+          ) : topHasMore ? (
+            <button
+              type="button"
+              onClick={triggerTopLoad}
+              className="inline-flex items-center gap-1.5 rounded-full border border-[var(--slack-border)] bg-[var(--slack-surface-bg)] px-3.5 py-1 text-xs font-medium text-[var(--slack-link)] transition hover:bg-[var(--slack-badge-bg)]"
+            >
+              <ArrowUp className="h-3.5 w-3.5" />
+              Load {sortOrder === 'asc' ? 'earlier' : 'newer'} month (
+              <span className="font-mono-code">{topHasMore}</span>)
+            </button>
+          ) : visibleMessages.length > 0 ? (
+            <span className="text-[11px] text-[var(--slack-text-muted)]">
+              {sortOrder === 'asc'
+                ? 'Beginning of archived channel history'
+                : 'Latest archived messages'}
+            </span>
+          ) : null}
+        </div>
+
         {dateGroups.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center px-6 py-16 text-center text-[var(--slack-text-muted)]">
             <MessageSquare className="mb-3 h-10 w-10 opacity-40" />
@@ -233,7 +408,7 @@ export const MessageList: React.FC<MessageListProps> = ({
               No messages match this view
             </p>
             <p className="mt-1 text-xs">
-              Try clearing the filter or picking another month above.
+              Try clearing the filter or loading another month.
             </p>
           </div>
         ) : (
@@ -252,7 +427,7 @@ export const MessageList: React.FC<MessageListProps> = ({
                   key={msg.ts}
                   message={msg}
                   channelId={channelId}
-                  month={month}
+                  month={msg.date.slice(0, 7) || loadedMonths[0] || ''}
                   compact={
                     sortOrder === 'asc' &&
                     shouldGroupWithPrevious(group.items[idx - 1], msg)
@@ -267,6 +442,32 @@ export const MessageList: React.FC<MessageListProps> = ({
             </div>
           ))
         )}
+
+        {/* Bottom infinite-load sentinel / control */}
+        <div className="flex items-center justify-center pt-4 pb-2">
+          {bottomLoading ? (
+            <div className="inline-flex items-center gap-2 rounded-full border border-[var(--slack-border)] bg-[var(--slack-surface-bg)] px-3.5 py-1 text-xs text-[var(--slack-text-muted)]">
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-[var(--slack-accent)]" />
+              <span>Loading {bottomHasMore}...</span>
+            </div>
+          ) : bottomHasMore ? (
+            <button
+              type="button"
+              onClick={triggerBottomLoad}
+              className="inline-flex items-center gap-1.5 rounded-full border border-[var(--slack-border)] bg-[var(--slack-surface-bg)] px-3.5 py-1 text-xs font-medium text-[var(--slack-link)] transition hover:bg-[var(--slack-badge-bg)]"
+            >
+              <ArrowDown className="h-3.5 w-3.5" />
+              Load {sortOrder === 'asc' ? 'newer' : 'earlier'} month (
+              <span className="font-mono-code">{bottomHasMore}</span>)
+            </button>
+          ) : visibleMessages.length > 0 ? (
+            <span className="text-[11px] text-[var(--slack-text-muted)]">
+              {sortOrder === 'asc'
+                ? 'End of archived channel history (latest)'
+                : 'Beginning of archived channel history'}
+            </span>
+          ) : null}
+        </div>
       </div>
     </div>
   );

@@ -31,12 +31,26 @@ interface MessageListProps {
   loadingNext: boolean;
   messages: ArchiveMessage[];
   highlightTs?: string;
+  highlightRequestKey?: number;
+  initialScrollTop?: number | null;
+  initialSortOrder?: 'asc' | 'desc';
+  initialShowHiddenReplies?: boolean;
+  initialLocalFilter?: string;
   activeThreadTs?: string;
   onLoadPrev: () => void;
   onLoadNext: () => void;
   onOpenThread: (message: ArchiveMessage) => void;
   onNavigateChannel: (channelId: string, month?: string, ts?: string) => void;
   onPreviewFile: (file: MessageFile) => void;
+  onScrollTopChange?: (channelId: string, scrollTop: number) => void;
+  onViewPrefsChange?: (
+    channelId: string,
+    prefs: {
+      sortOrder: 'asc' | 'desc';
+      showHiddenReplies: boolean;
+      localFilter: string;
+    }
+  ) => void;
 }
 
 function shouldGroupWithPrevious(
@@ -64,26 +78,44 @@ export const MessageList: React.FC<MessageListProps> = ({
   loadingNext,
   messages,
   highlightTs,
+  highlightRequestKey = 0,
+  initialScrollTop = null,
+  initialSortOrder = 'asc',
+  initialShowHiddenReplies = false,
+  initialLocalFilter = '',
   activeThreadTs,
   onLoadPrev,
   onLoadNext,
   onOpenThread,
   onNavigateChannel,
   onPreviewFile,
+  onScrollTopChange,
+  onViewPrefsChange,
 }) => {
-  const [localFilter, setLocalFilter] = useState('');
-  const [showHiddenReplies, setShowHiddenReplies] = useState(false);
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [localFilter, setLocalFilter] = useState(initialLocalFilter);
+  const [showHiddenReplies, setShowHiddenReplies] = useState(
+    initialShowHiddenReplies
+  );
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(initialSortOrder);
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const initialReadyRef = useRef(false);
   const lastAutoTriggerRef = useRef(0);
+  const prevHighlightKeyRef = useRef(highlightRequestKey);
   const prependAnchorRef = useRef<{
     active: boolean;
     scrollHeight: number;
     scrollTop: number;
   }>({ active: false, scrollHeight: 0, scrollTop: 0 });
+
+  useEffect(() => {
+    onViewPrefsChange?.(channelId, {
+      sortOrder,
+      showHiddenReplies,
+      localFilter,
+    });
+  }, [channelId, sortOrder, showHiddenReplies, localFilter, onViewPrefsChange]);
 
   const hiddenReplyCount = useMemo(
     () =>
@@ -144,51 +176,110 @@ export const MessageList: React.FC<MessageListProps> = ({
     const delta = el.scrollHeight - anchor.scrollHeight;
     if (delta > 0) {
       el.scrollTop = anchor.scrollTop + delta;
+      onScrollTopChange?.(channelId, el.scrollTop);
     }
     anchor.active = false;
-  }, [visibleMessages]);
+  }, [visibleMessages, channelId, onScrollTopChange]);
 
-  // Scroll to highlighted message
-  useEffect(() => {
-    if (!highlightTs) return;
-    const timer = setTimeout(() => {
-      const target = containerRef.current?.querySelector(
-        `[data-ts="${CSS.escape(highlightTs)}"]`
-      );
-      if (target) {
-        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    }, 80);
-    return () => clearTimeout(timer);
-  }, [highlightTs, sessionKey]);
-
-  // Initial scroll behavior ONLY when switching channel/requested-month session (not on infinite-load append/prepend)
-  useEffect(() => {
-    setLocalFilter('');
+  // Initial scroll behavior on mount / session switch (restore saved scrollTop or jump cleanly)
+  useLayoutEffect(() => {
     initialReadyRef.current = false;
     prependAnchorRef.current.active = false;
 
-    if (highlightTs) {
-      const readyTimer = setTimeout(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    let timerA: ReturnType<typeof setTimeout> | undefined;
+    let timerB: ReturnType<typeof setTimeout> | undefined;
+
+    if (highlightTs && highlightRequestKey > 0) {
+      if (initialScrollTop !== null && initialScrollTop !== undefined) {
+        el.scrollTop = initialScrollTop;
+      }
+      timerA = setTimeout(() => {
+        const target = el.querySelector(
+          `[data-ts="${CSS.escape(highlightTs)}"]`
+        );
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        timerB = setTimeout(() => {
+          if (containerRef.current) {
+            onScrollTopChange?.(channelId, containerRef.current.scrollTop);
+          }
+          initialReadyRef.current = true;
+        }, 320);
+      }, 80);
+    } else if (initialScrollTop !== null && initialScrollTop !== undefined) {
+      el.scrollTop = initialScrollTop;
+      timerA = setTimeout(() => {
         initialReadyRef.current = true;
-      }, 250);
-      return () => clearTimeout(readyTimer);
+      }, 120);
+    } else {
+      timerA = setTimeout(() => {
+        if (isLatestLoaded && sortOrder === 'asc') {
+          el.scrollTo({ top: el.scrollHeight });
+        } else {
+          el.scrollTo({ top: 0 });
+        }
+        onScrollTopChange?.(channelId, el.scrollTop);
+        timerB = setTimeout(() => {
+          initialReadyRef.current = true;
+        }, 140);
+      }, 25);
     }
+
+    return () => {
+      if (timerA) clearTimeout(timerA);
+      if (timerB) clearTimeout(timerB);
+      if (initialReadyRef.current && containerRef.current) {
+        onScrollTopChange?.(channelId, containerRef.current.scrollTop);
+      }
+    };
+    // Intentionally scoped to sessionKey mount/switch; subsequent highlight jumps handled below
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionKey]);
+
+  // Subsequent highlight jumps within the same mounted channel session
+  useEffect(() => {
+    if (highlightRequestKey === prevHighlightKeyRef.current) return;
+    prevHighlightKeyRef.current = highlightRequestKey;
+    if (!highlightRequestKey || !highlightTs) return;
 
     const el = containerRef.current;
     if (!el) return;
     const timer = setTimeout(() => {
-      if (isLatestLoaded && sortOrder === 'asc') {
-        el.scrollTo({ top: el.scrollHeight });
-      } else {
-        el.scrollTo({ top: 0 });
+      const target = el.querySelector(
+        `[data-ts="${CSS.escape(highlightTs)}"]`
+      );
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(() => {
+          if (containerRef.current) {
+            onScrollTopChange?.(channelId, containerRef.current.scrollTop);
+          }
+        }, 320);
       }
-      setTimeout(() => {
-        initialReadyRef.current = true;
-      }, 150);
-    }, 30);
+    }, 80);
     return () => clearTimeout(timer);
-  }, [sessionKey, sortOrder, highlightTs]);
+  }, [highlightRequestKey, highlightTs, channelId, onScrollTopChange]);
+
+  const handleToggleSortOrder = useCallback(() => {
+    setSortOrder((prev) => {
+      const next = prev === 'asc' ? 'desc' : 'asc';
+      requestAnimationFrame(() => {
+        const el = containerRef.current;
+        if (!el) return;
+        if (isLatestLoaded && next === 'asc') {
+          el.scrollTo({ top: el.scrollHeight });
+        } else {
+          el.scrollTo({ top: 0 });
+        }
+        onScrollTopChange?.(channelId, el.scrollTop);
+      });
+      return next;
+    });
+  }, [isLatestLoaded, channelId, onScrollTopChange]);
 
   const triggerTopLoad = useCallback(() => {
     const el = containerRef.current;
@@ -233,9 +324,10 @@ export const MessageList: React.FC<MessageListProps> = ({
   }, [sortOrder, prevMonth, nextMonth, loadingPrev, loadingNext, onLoadPrev, onLoadNext]);
 
   const handleScroll = () => {
-    if (!initialReadyRef.current) return;
     const el = containerRef.current;
-    if (!el) return;
+    if (!el || !initialReadyRef.current) return;
+
+    onScrollTopChange?.(channelId, el.scrollTop);
 
     // Near top -> load earlier (in asc) or newer (in desc)
     if (el.scrollTop < 180) {
@@ -310,9 +402,7 @@ export const MessageList: React.FC<MessageListProps> = ({
 
             <button
               type="button"
-              onClick={() =>
-                setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'))
-              }
+              onClick={handleToggleSortOrder}
               className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[var(--slack-border)] bg-[var(--slack-main-bg)] px-2 py-0.5 text-[var(--slack-text-muted)] transition hover:text-[var(--slack-text)]"
               title="Toggle chronological order"
             >

@@ -830,7 +830,10 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                     </div>
                     <div className="line-clamp-3 text-sm text-[var(--slack-text)]">
                       {hit.message.contentsHtml ? (
-                        <RichContent html={hit.message.contentsHtml} />
+                        <RichContent
+                          html={hit.message.contentsHtml}
+                          className="pointer-events-none"
+                        />
                       ) : (
                         hit.message.text
                       )}

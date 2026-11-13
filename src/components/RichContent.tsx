@@ -1,4 +1,8 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
+import {
+  resolveChannelReferencesInHtml,
+  useChannelMap,
+} from '../context/ChannelMapContext';
 import { parseArchiveChannelHref } from '../utils/format';
 
 interface RichContentProps {
@@ -12,6 +16,13 @@ export const RichContent: React.FC<RichContentProps> = ({
   className = '',
   onNavigateChannel,
 }) => {
+  const channelMap = useChannelMap();
+
+  const resolvedHtml = useMemo(
+    () => resolveChannelReferencesInHtml(html, channelMap),
+    [html, channelMap]
+  );
+
   const handleClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
       const target = e.target as HTMLElement | null;
@@ -38,7 +49,7 @@ export const RichContent: React.FC<RichContentProps> = ({
     <div
       className={`slack-html text-[15px] ${className}`}
       onClick={handleClick}
-      dangerouslySetInnerHTML={{ __html: html }}
+      dangerouslySetInnerHTML={{ __html: resolvedHtml }}
     />
   );
 };

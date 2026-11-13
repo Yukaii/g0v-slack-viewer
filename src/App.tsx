@@ -28,6 +28,7 @@ import { MessageList } from './components/MessageList';
 import { ThreadPanel } from './components/ThreadPanel';
 import { ChannelInfoPanel } from './components/ChannelInfoPanel';
 import { ChannelDirectory } from './components/ChannelDirectory';
+import { ChannelMapProvider } from './context/ChannelMapContext';
 import { CommandPalette, type PaletteMode } from './components/CommandPalette';
 import { getCommandShortcutLabel } from './utils/platform';
 import { ImageLightbox } from './components/ImageLightbox';
@@ -85,8 +86,47 @@ function mergeMessages(
   return Array.from(map.values()).sort((a, b) => Number(a.ts) - Number(b.ts));
 }
 
+const MAX_CACHED_CHANNELS = 30;
+
+interface AppRouteState {
+  viewMode: 'channel' | 'directory';
+  channelId: string;
+  month?: string;
+  highlightTs?: string;
+  forceMonthReload?: boolean;
+  seq: number;
+}
+
+interface MessageListRestoreState {
+  scrollTop: number | null;
+  sortOrder: 'asc' | 'desc';
+  showHiddenReplies: boolean;
+  localFilter: string;
+}
+
+interface CachedChannelState extends MessageListRestoreState {
+  detail: ChannelDetailResponse;
+  loadedMonths: string[];
+  loadedMessages: ArchiveMessage[];
+  prevMonthToLoad: string | null;
+  nextMonthToLoad: string | null;
+  lastHighlightTs?: string;
+}
+
+const DEFAULT_LIST_RESTORE: MessageListRestoreState = {
+  scrollTop: null,
+  sortOrder: 'asc',
+  showHiddenReplies: false,
+  localFilter: '',
+};
+
+function getInitialRoute(): AppRouteState {
+  const parsed = parseLocation();
+  return { ...parsed, seq: 0 };
+}
+
 export const App: React.FC = () => {
-  const initialRoute = useMemo(() => parseLocation(), []);
+  const initialRoute = useMemo(() => getInitialRoute(), []);
 
   const [theme, setTheme] = useState<AppThemeId>(() => loadTheme());
   const [stats, setStats] = useState<ArchiveStats | null>(null);
@@ -98,18 +138,10 @@ export const App: React.FC = () => {
     loadRecentChannels()
   );
 
-  const [viewMode, setViewMode] = useState<'channel' | 'directory'>(
-    initialRoute.viewMode
-  );
-  const [activeChannelId, setActiveChannelId] = useState<string>(
-    initialRoute.channelId
-  );
-  const [requestedMonth, setRequestedMonth] = useState<string | undefined>(
-    initialRoute.month
-  );
-  const [highlightTs, setHighlightTs] = useState<string | undefined>(
-    initialRoute.highlightTs
-  );
+  const [routeState, setRouteState] = useState<AppRouteState>(initialRoute);
+  const viewMode = routeState.viewMode;
+  const activeChannelId = routeState.channelId;
+  const highlightTs = routeState.highlightTs;
 
   const [channelDetail, setChannelDetail] =
     useState<ChannelDetailResponse | null>(null);
@@ -117,12 +149,19 @@ export const App: React.FC = () => {
   const [loadedMessages, setLoadedMessages] = useState<ArchiveMessage[]>([]);
   const [prevMonthToLoad, setPrevMonthToLoad] = useState<string | null>(null);
   const [nextMonthToLoad, setNextMonthToLoad] = useState<string | null>(null);
+  const [listRestoreState, setListRestoreState] =
+    useState<MessageListRestoreState>(DEFAULT_LIST_RESTORE);
+  const [highlightRequestKey, setHighlightRequestKey] = useState(
+    initialRoute.highlightTs ? 1 : 0
+  );
   const [loadingPrev, setLoadingPrev] = useState(false);
   const [loadingNext, setLoadingNext] = useState(false);
 
   const [channelLoading, setChannelLoading] = useState(false);
   const [channelError, setChannelError] = useState<string | null>(null);
   const sessionRef = useRef(0);
+  const highlightSeqRef = useRef(initialRoute.highlightTs ? 1 : 0);
+  const channelCacheRef = useRef<Map<string, CachedChannelState>>(new Map());
 
   const [activeThread, setActiveThread] = useState<ArchiveMessage | null>(null);
   const [showChannelInfo, setShowChannelInfo] = useState(false);
@@ -164,7 +203,11 @@ export const App: React.FC = () => {
         e.preventDefault();
         if (e.shiftKey) {
           setPaletteOpen(false);
-          setViewMode('directory');
+          setRouteState((prev) => ({
+            ...prev,
+            viewMode: 'directory',
+            seq: prev.seq + 1,
+          }));
           setActiveThread(null);
           setShowChannelInfo(false);
           window.history.pushState(null, '', '/channels');
@@ -201,18 +244,78 @@ export const App: React.FC = () => {
   useEffect(() => {
     const onPopState = () => {
       const next = parseLocation();
-      setViewMode(next.viewMode);
-      setActiveChannelId(next.channelId);
-      setRequestedMonth(next.month);
-      setHighlightTs(next.highlightTs);
+      setRouteState((prev) => ({
+        ...next,
+        forceMonthReload: false,
+        seq: prev.seq + 1,
+      }));
       setActiveThread(null);
     };
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
 
+  const setCacheEntry = useCallback(
+    (channelId: string, entry: CachedChannelState) => {
+      const cache = channelCacheRef.current;
+      cache.delete(channelId);
+      cache.set(channelId, entry);
+      if (cache.size > MAX_CACHED_CHANNELS) {
+        const oldestKey = cache.keys().next().value;
+        if (oldestKey) cache.delete(oldestKey);
+      }
+    },
+    []
+  );
+
   const loadChannel = useCallback(
-    async (channelId: string, month?: string) => {
+    async (
+      channelId: string,
+      month?: string,
+      ts?: string,
+      forceMonthReload?: boolean
+    ) => {
+      const cached = channelCacheRef.current.get(channelId);
+      const canRestoreCached =
+        !forceMonthReload &&
+        Boolean(cached) &&
+        (!month || cached!.loadedMonths.includes(month)) &&
+        (!ts ||
+          cached!.loadedMessages.some(
+            (m) => m.ts === ts || m.replies.some((r) => r.ts === ts)
+          ));
+
+      if (canRestoreCached && cached) {
+        // Touch LRU entry without discarding loaded messages or scroll state
+        setCacheEntry(channelId, cached);
+        const mySession = ++sessionRef.current;
+        setChannelError(null);
+        setChannelLoading(false);
+        setLoadingPrev(false);
+        setLoadingNext(false);
+        setChannelDetail(cached.detail);
+        setLoadedMonths(cached.loadedMonths);
+        setLoadedMessages(cached.loadedMessages);
+        setPrevMonthToLoad(cached.prevMonthToLoad);
+        setNextMonthToLoad(cached.nextMonthToLoad);
+        setListRestoreState({
+          scrollTop: cached.scrollTop,
+          sortOrder: cached.sortOrder,
+          showHiddenReplies: cached.showHiddenReplies,
+          localFilter: cached.localFilter,
+        });
+        if (ts && (ts !== cached.lastHighlightTs || cached.scrollTop === null)) {
+          cached.lastHighlightTs = ts;
+          setHighlightRequestKey(++highlightSeqRef.current);
+        } else {
+          setHighlightRequestKey(0);
+        }
+        if (sessionRef.current === mySession) {
+          setRecentIds(recordRecentChannel(channelId));
+        }
+        return;
+      }
+
       const mySession = ++sessionRef.current;
       setChannelLoading(true);
       setChannelError(null);
@@ -221,11 +324,29 @@ export const App: React.FC = () => {
       try {
         const data = await fetchChannelMessages(channelId, month);
         if (sessionRef.current !== mySession) return;
+        const nextRestore: MessageListRestoreState = {
+          scrollTop: null,
+          sortOrder: cached?.sortOrder ?? 'asc',
+          showHiddenReplies: cached?.showHiddenReplies ?? false,
+          localFilter: '',
+        };
+        const newEntry: CachedChannelState = {
+          detail: data,
+          loadedMonths: [data.activeMonth],
+          loadedMessages: data.messages,
+          prevMonthToLoad: data.previousMonth,
+          nextMonthToLoad: data.nextMonth,
+          lastHighlightTs: ts,
+          ...nextRestore,
+        };
+        setCacheEntry(channelId, newEntry);
         setChannelDetail(data);
-        setLoadedMonths([data.activeMonth]);
-        setLoadedMessages(data.messages);
-        setPrevMonthToLoad(data.previousMonth);
-        setNextMonthToLoad(data.nextMonth);
+        setLoadedMonths(newEntry.loadedMonths);
+        setLoadedMessages(newEntry.loadedMessages);
+        setPrevMonthToLoad(newEntry.prevMonthToLoad);
+        setNextMonthToLoad(newEntry.nextMonthToLoad);
+        setListRestoreState(nextRestore);
+        setHighlightRequestKey(ts ? ++highlightSeqRef.current : 0);
         setRecentIds(recordRecentChannel(channelId));
       } catch (err) {
         if (sessionRef.current !== mySession) return;
@@ -238,27 +359,44 @@ export const App: React.FC = () => {
         }
       }
     },
-    []
+    [setCacheEntry]
   );
 
-  // Fetch channel messages when in channel mode
+  // Fetch or restore channel messages on route changes in channel mode
   useEffect(() => {
-    if (viewMode !== 'channel') return;
-    loadChannel(activeChannelId, requestedMonth);
-  }, [viewMode, activeChannelId, requestedMonth, loadChannel]);
+    if (routeState.viewMode !== 'channel') return;
+    loadChannel(
+      routeState.channelId,
+      routeState.month,
+      routeState.highlightTs,
+      routeState.forceMonthReload
+    );
+  }, [routeState, loadChannel]);
 
   const loadPrevMonth = useCallback(async () => {
     if (!prevMonthToLoad || loadingPrev || channelLoading) return;
     const mySession = sessionRef.current;
+    const targetChannelId = activeChannelId;
     const targetMonth = prevMonthToLoad;
     setLoadingPrev(true);
     try {
-      const data = await fetchChannelMessages(activeChannelId, targetMonth);
+      const data = await fetchChannelMessages(targetChannelId, targetMonth);
       if (sessionRef.current !== mySession) return;
-      setLoadedMessages((prev) => mergeMessages(prev, data.messages));
-      setLoadedMonths((prev) =>
-        Array.from(new Set([data.activeMonth, ...prev])).sort()
+      const entry = channelCacheRef.current.get(targetChannelId);
+      const nextMessages = mergeMessages(
+        entry ? entry.loadedMessages : loadedMessages,
+        data.messages
       );
+      const nextMonths = Array.from(
+        new Set([data.activeMonth, ...(entry ? entry.loadedMonths : loadedMonths)])
+      ).sort();
+      if (entry) {
+        entry.loadedMessages = nextMessages;
+        entry.loadedMonths = nextMonths;
+        entry.prevMonthToLoad = data.previousMonth;
+      }
+      setLoadedMessages(nextMessages);
+      setLoadedMonths(nextMonths);
       setPrevMonthToLoad(data.previousMonth);
     } catch (err) {
       console.warn('Failed to load previous month:', err);
@@ -267,20 +405,39 @@ export const App: React.FC = () => {
         setLoadingPrev(false);
       }
     }
-  }, [activeChannelId, prevMonthToLoad, loadingPrev, channelLoading]);
+  }, [
+    activeChannelId,
+    prevMonthToLoad,
+    loadingPrev,
+    channelLoading,
+    loadedMessages,
+    loadedMonths,
+  ]);
 
   const loadNextMonth = useCallback(async () => {
     if (!nextMonthToLoad || loadingNext || channelLoading) return;
     const mySession = sessionRef.current;
+    const targetChannelId = activeChannelId;
     const targetMonth = nextMonthToLoad;
     setLoadingNext(true);
     try {
-      const data = await fetchChannelMessages(activeChannelId, targetMonth);
+      const data = await fetchChannelMessages(targetChannelId, targetMonth);
       if (sessionRef.current !== mySession) return;
-      setLoadedMessages((prev) => mergeMessages(prev, data.messages));
-      setLoadedMonths((prev) =>
-        Array.from(new Set([...prev, data.activeMonth])).sort()
+      const entry = channelCacheRef.current.get(targetChannelId);
+      const nextMessages = mergeMessages(
+        entry ? entry.loadedMessages : loadedMessages,
+        data.messages
       );
+      const nextMonths = Array.from(
+        new Set([...(entry ? entry.loadedMonths : loadedMonths), data.activeMonth])
+      ).sort();
+      if (entry) {
+        entry.loadedMessages = nextMessages;
+        entry.loadedMonths = nextMonths;
+        entry.nextMonthToLoad = data.nextMonth;
+      }
+      setLoadedMessages(nextMessages);
+      setLoadedMonths(nextMonths);
       setNextMonthToLoad(data.nextMonth);
     } catch (err) {
       console.warn('Failed to load next month:', err);
@@ -289,27 +446,104 @@ export const App: React.FC = () => {
         setLoadingNext(false);
       }
     }
-  }, [activeChannelId, nextMonthToLoad, loadingNext, channelLoading]);
+  }, [
+    activeChannelId,
+    nextMonthToLoad,
+    loadingNext,
+    channelLoading,
+    loadedMessages,
+    loadedMonths,
+  ]);
+
+  const handleScrollTopChange = useCallback(
+    (channelId: string, scrollTop: number) => {
+      const entry = channelCacheRef.current.get(channelId);
+      if (entry) {
+        entry.scrollTop = scrollTop;
+      }
+    },
+    []
+  );
+
+  const handleViewPrefsChange = useCallback(
+    (
+      channelId: string,
+      prefs: {
+        sortOrder: 'asc' | 'desc';
+        showHiddenReplies: boolean;
+        localFilter: string;
+      }
+    ) => {
+      const entry = channelCacheRef.current.get(channelId);
+      if (entry) {
+        entry.sortOrder = prefs.sortOrder;
+        entry.showHiddenReplies = prefs.showHiddenReplies;
+        entry.localFilter = prefs.localFilter;
+      }
+    },
+    []
+  );
 
   const navigateToChannel = useCallback(
     (channelId: string, month?: string, ts?: string) => {
-      setViewMode('channel');
-      setActiveChannelId(channelId);
-      setRequestedMonth(month);
-      setHighlightTs(ts);
       setActiveThread(null);
+      setRouteState((prev) => {
+        if (
+          prev.viewMode === 'channel' &&
+          prev.channelId === channelId &&
+          !month &&
+          !ts
+        ) {
+          return prev;
+        }
+        return {
+          viewMode: 'channel',
+          channelId,
+          month,
+          highlightTs: ts,
+          forceMonthReload: false,
+          seq: prev.seq + 1,
+        };
+      });
 
       const path = month
         ? `/channel/${encodeURIComponent(channelId)}/${encodeURIComponent(month)}`
         : `/channel/${encodeURIComponent(channelId)}`;
       const fullUrl = ts ? `${path}?ts=${encodeURIComponent(ts)}` : path;
-      window.history.pushState(null, '', fullUrl);
+      if (window.location.pathname + window.location.search !== fullUrl) {
+        window.history.pushState(null, '', fullUrl);
+      }
     },
     []
   );
 
+  const handleSelectMonth = useCallback(
+    (month: string) => {
+      setActiveThread(null);
+      setRouteState((prev) => ({
+        viewMode: 'channel',
+        channelId: prev.channelId,
+        month,
+        highlightTs: undefined,
+        forceMonthReload: true,
+        seq: prev.seq + 1,
+      }));
+      const path = `/channel/${encodeURIComponent(
+        activeChannelId
+      )}/${encodeURIComponent(month)}`;
+      if (window.location.pathname + window.location.search !== path) {
+        window.history.pushState(null, '', path);
+      }
+    },
+    [activeChannelId]
+  );
+
   const navigateToDirectory = useCallback(() => {
-    setViewMode('directory');
+    setRouteState((prev) => ({
+      ...prev,
+      viewMode: 'directory',
+      seq: prev.seq + 1,
+    }));
     setActiveThread(null);
     setShowChannelInfo(false);
     window.history.pushState(null, '', '/channels');
@@ -340,9 +574,14 @@ export const App: React.FC = () => {
     setShowChannelInfo((v) => !v);
   }, []);
 
-  const sessionKey = `${activeChannelId}:${channelDetail?.activeMonth ?? requestedMonth ?? 'latest'}`;
+  const activeDetail =
+    channelDetail?.channelId === activeChannelId ? channelDetail : null;
+  const sessionKey = activeDetail
+    ? `${activeDetail.channelId}:${activeDetail.activeMonth}`
+    : `${activeChannelId}:loading`;
 
   return (
+    <ChannelMapProvider channels={channels}>
     <div className="flex h-dvh w-full max-w-full flex-col overflow-hidden bg-[var(--slack-main-bg)] text-[var(--slack-text)]">
       {/* Top Slack Workspace Bar */}
       <div className="hidden h-11 shrink-0 items-center justify-between gap-3 border-b-2 border-[var(--g0v-brand-accent)] bg-[var(--slack-top-bg)] px-3 text-white sm:flex">
@@ -434,38 +673,45 @@ export const App: React.FC = () => {
             <>
               <ChannelHeader
                 summary={activeChannelSummary}
-                detail={channelDetail}
-                loadedMonths={loadedMonths}
+                detail={activeDetail}
+                loadedMonths={activeDetail ? loadedMonths : []}
                 loading={channelLoading}
                 isStarred={starredIds.includes(activeChannelId)}
                 showInfo={showChannelInfo}
                 onToggleStar={() => toggleStar(activeChannelId)}
                 onToggleInfo={handleToggleInfo}
-                onSelectMonth={(m) => navigateToChannel(activeChannelId, m)}
+                onSelectMonth={handleSelectMonth}
                 onOpenMobileSidebar={() => setMobileSidebarOpen(true)}
                 onOpenSwitcher={() => openPalette('switcher')}
                 onNavigateChannel={navigateToChannel}
               />
 
-              {channelLoading && !channelDetail ? (
+              {channelLoading && !activeDetail ? (
                 <div className="flex flex-1 flex-col items-center justify-center gap-3 text-sm text-[var(--slack-text-muted)]">
                   <Loader2 className="h-7 w-7 animate-spin text-[var(--slack-accent)]" />
                   <span>Loading archived messages...</span>
                 </div>
-              ) : channelError ? (
+              ) : channelError && !activeDetail ? (
                 <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
                   <AlertCircle className="h-9 w-9 text-rose-500" />
                   <p className="text-sm font-medium">{channelError}</p>
                   <button
                     type="button"
-                    onClick={() => loadChannel(activeChannelId, requestedMonth)}
+                    onClick={() =>
+                      loadChannel(
+                        activeChannelId,
+                        routeState.month,
+                        routeState.highlightTs,
+                        routeState.forceMonthReload
+                      )
+                    }
                     className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--slack-accent)] px-3.5 py-1.5 text-xs font-semibold text-white hover:opacity-90"
                   >
                     <RefreshCw className="h-3.5 w-3.5" />
                     Retry
                   </button>
                 </div>
-              ) : channelDetail ? (
+              ) : activeDetail ? (
                 <div className="relative flex min-h-0 flex-1 flex-col">
                   {channelLoading && (
                     <div className="absolute top-12 right-5 z-20 inline-flex items-center gap-1.5 rounded-full border border-[var(--slack-border)] bg-[var(--slack-main-bg)] px-3 py-1 text-xs shadow-md">
@@ -474,8 +720,9 @@ export const App: React.FC = () => {
                     </div>
                   )}
                   <MessageList
+                    key={sessionKey}
                     sessionKey={sessionKey}
-                    channelId={channelDetail.channelId}
+                    channelId={activeDetail.channelId}
                     loadedMonths={loadedMonths}
                     isLatestLoaded={!nextMonthToLoad}
                     prevMonth={prevMonthToLoad}
@@ -484,12 +731,19 @@ export const App: React.FC = () => {
                     loadingNext={loadingNext}
                     messages={loadedMessages}
                     highlightTs={highlightTs}
+                    highlightRequestKey={highlightRequestKey}
+                    initialScrollTop={listRestoreState.scrollTop}
+                    initialSortOrder={listRestoreState.sortOrder}
+                    initialShowHiddenReplies={listRestoreState.showHiddenReplies}
+                    initialLocalFilter={listRestoreState.localFilter}
                     activeThreadTs={activeThread?.ts}
                     onLoadPrev={loadPrevMonth}
                     onLoadNext={loadNextMonth}
                     onOpenThread={handleOpenThread}
                     onNavigateChannel={navigateToChannel}
                     onPreviewFile={setPreviewFile}
+                    onScrollTopChange={handleScrollTopChange}
+                    onViewPrefsChange={handleViewPrefsChange}
                   />
                 </div>
               ) : null}
@@ -498,11 +752,11 @@ export const App: React.FC = () => {
         </main>
 
         {/* Right Contextual Pane: Thread or Channel Info */}
-        {viewMode === 'channel' && activeThread && channelDetail && (
+        {viewMode === 'channel' && activeThread && activeDetail && (
           <ThreadPanel
-            channelId={channelDetail.channelId}
-            channelName={channelDetail.channelName}
-            month={activeThread.date.slice(0, 7) || channelDetail.activeMonth}
+            channelId={activeDetail.channelId}
+            channelName={activeDetail.channelName}
+            month={activeThread.date.slice(0, 7) || activeDetail.activeMonth}
             message={activeThread}
             onClose={() => setActiveThread(null)}
             onNavigateChannel={navigateToChannel}
@@ -545,6 +799,7 @@ export const App: React.FC = () => {
         onClose={() => setPreviewFile(null)}
       />
     </div>
+    </ChannelMapProvider>
   );
 };
 

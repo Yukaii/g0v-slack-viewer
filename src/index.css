@@ -136,6 +136,25 @@ body,
   border-radius: 3px;
 }
 
+.slack-html .channel-mention {
+  font-weight: 600;
+  color: var(--slack-link);
+  background-color: color-mix(in srgb, var(--slack-link) 10%, transparent);
+  padding: 0 3px;
+  border-radius: 3px;
+  text-decoration: none;
+}
+
+.slack-html a.channel-mention:hover {
+  background-color: color-mix(in srgb, var(--slack-link) 18%, transparent);
+  text-decoration: none;
+}
+
+.slack-html span.channel-mention-unknown {
+  color: var(--slack-text-muted);
+  background-color: var(--slack-badge-bg);
+}
+
 .slack-html img {
   display: inline-block;
   width: 20px;

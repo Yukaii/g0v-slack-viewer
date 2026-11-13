@@ -78,7 +78,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
       } ${compact ? 'pt-0.5 pb-1' : 'pt-2 pb-1.5'}`}
     >
       {/* Floating Slack-style hover action bar */}
-      <div className="pointer-events-none absolute -top-3.5 right-5 z-10 flex items-center gap-0.5 rounded-lg border border-[var(--slack-border)] bg-[var(--slack-main-bg)] p-0.5 opacity-0 shadow-sm transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
+      <div className="pointer-events-none absolute -top-3.5 right-2.5 z-10 sm:right-5 flex items-center gap-0.5 rounded-lg border border-[var(--slack-border)] bg-[var(--slack-main-bg)] p-0.5 opacity-0 shadow-sm transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
         {onOpenThread && (
           <button
             type="button"
@@ -209,11 +209,11 @@ export const MessageItem: React.FC<MessageItemProps> = ({
           <div className="mt-2 flex flex-wrap gap-2.5">
             {message.files.map((file, idx) =>
               file.isImage && file.thumbUrl ? (
-                <div key={file.id || idx} className="max-w-sm">
+                <div key={file.id || idx} className="w-full max-w-full sm:w-auto sm:max-w-sm">
                   <button
                     type="button"
                     onClick={() => onPreviewFile?.(file)}
-                    className="group/img block overflow-hidden rounded-lg border border-[var(--slack-border)] bg-[var(--slack-surface-bg)] text-left transition hover:border-[var(--slack-accent)]"
+                    className="group/img block w-full max-w-full overflow-hidden rounded-lg border border-[var(--slack-border)] bg-[var(--slack-surface-bg)] text-left transition hover:border-[var(--slack-accent)] sm:w-auto"
                   >
                     <img
                       src={file.thumbUrl}
@@ -235,10 +235,10 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                   href={file.fullUrl || file.thumbUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-lg border border-[var(--slack-border)] bg-[var(--slack-surface-bg)] px-3 py-2 text-xs hover:border-[var(--slack-accent)]"
+                  className="inline-flex max-w-full min-w-0 items-center gap-2 rounded-lg border border-[var(--slack-border)] bg-[var(--slack-surface-bg)] px-3 py-2 text-xs hover:border-[var(--slack-accent)]"
                 >
-                  <FileText className="h-4 w-4 text-[var(--slack-link)]" />
-                  <span className="font-medium">{file.title}</span>
+                  <FileText className="h-4 w-4 shrink-0 text-[var(--slack-link)]" />
+                  <span className="truncate font-medium">{file.title}</span>
                   {file.size && (
                     <span className="text-[var(--slack-text-muted)]">
                       ({formatFileSize(file.size)})
@@ -257,7 +257,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
               att.isMsgUnfurl ? (
                 <div
                   key={idx}
-                  className="max-w-2xl rounded-r-md border-l-4 border-[var(--slack-border)] bg-[var(--slack-surface-bg)] px-3.5 py-2.5"
+                  className="w-full max-w-2xl overflow-hidden rounded-r-md border-l-4 border-[var(--slack-border)] bg-[var(--slack-surface-bg)] px-3 py-2 sm:px-3.5 sm:py-2.5"
                 >
                   <div className="mb-1 flex items-center gap-2">
                     {att.authorIcon && (
@@ -309,7 +309,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
               ) : (
                 <div
                   key={idx}
-                  className="flex max-w-2xl items-start justify-between gap-3 rounded-r-md border-l-4 border-[#d1d2d3] dark:border-[#4b4d52] bg-[var(--slack-surface-bg)] px-3.5 py-2.5"
+                  className="flex w-full max-w-2xl items-start justify-between gap-2.5 overflow-hidden rounded-r-md border-l-4 border-[#d1d2d3] dark:border-[#4b4d52] bg-[var(--slack-surface-bg)] px-3 py-2 sm:gap-3 sm:px-3.5 sm:py-2.5"
                 >
                   <div className="min-w-0 flex-1 break-words [overflow-wrap:anywhere]">
                     {att.serviceName && (
@@ -351,7 +351,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                       src={att.imageUrl}
                       alt={att.title || ''}
                       loading="lazy"
-                      className="h-16 w-24 shrink-0 rounded border border-[var(--slack-border)] object-cover"
+                      className="h-14 w-16 shrink-0 rounded border border-[var(--slack-border)] object-cover sm:h-16 sm:w-24"
                     />
                   )}
                 </div>

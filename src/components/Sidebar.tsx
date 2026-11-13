@@ -3,9 +3,12 @@ import {
   ChevronDown,
   ChevronRight,
   Compass,
+  ExternalLink,
   Hash,
   Search,
+  Moon,
   Star,
+  Sun,
   X,
 } from 'lucide-react';
 import type { ArchiveStats, ChannelSummary } from '../types';
@@ -25,6 +28,8 @@ interface SidebarProps {
   onOpenDirectory: () => void;
   onOpenSwitcher: () => void;
   onOpenSearch: () => void;
+  theme: 'light' | 'dark';
+  onToggleTheme: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -40,6 +45,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenDirectory,
   onOpenSwitcher,
   onOpenSearch,
+  theme,
+  onToggleTheme,
 }) => {
   const shortcutLabel = useMemo(() => getCommandShortcutLabel(), []);
   const [filter, setFilter] = useState('');
@@ -305,6 +312,36 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
           )}
         </div>
+      </div>
+
+      {/* Mobile footer utilities (Theme + Source) */}
+      <div className="flex items-center justify-between border-t border-[var(--slack-sidebar-border)] px-3 py-2 text-xs lg:hidden">
+        <button
+          type="button"
+          onClick={onToggleTheme}
+          className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-white/80 hover:bg-white/10 hover:text-white"
+        >
+          {theme === 'dark' ? (
+            <>
+              <Sun className="h-3.5 w-3.5" />
+              <span>Light Mode</span>
+            </>
+          ) : (
+            <>
+              <Moon className="h-3.5 w-3.5" />
+              <span>Dark Mode</span>
+            </>
+          )}
+        </button>
+        <a
+          href="https://g0v-slack-archive.g0v.ronny.tw/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-white/75 hover:bg-white/10 hover:text-white"
+        >
+          <span>Source</span>
+          <ExternalLink className="h-3 w-3" />
+        </a>
       </div>
     </div>
   );

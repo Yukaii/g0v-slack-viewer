@@ -333,9 +333,9 @@ export const App: React.FC = () => {
   const sessionKey = `${activeChannelId}:${channelDetail?.activeMonth ?? requestedMonth ?? 'latest'}`;
 
   return (
-    <div className="flex h-dvh w-screen flex-col overflow-hidden bg-[var(--slack-main-bg)] text-[var(--slack-text)]">
+    <div className="flex h-dvh w-full max-w-full flex-col overflow-hidden bg-[var(--slack-main-bg)] text-[var(--slack-text)]">
       {/* Top Slack Workspace Bar */}
-      <div className="flex h-11 shrink-0 items-center justify-between gap-3 bg-[var(--slack-top-bg)] px-3 text-white">
+      <div className="hidden h-11 shrink-0 items-center justify-between gap-3 bg-[var(--slack-top-bg)] px-3 text-white sm:flex">
         <div className="hidden w-56 items-center gap-2 text-xs text-white/70 md:flex">
           <span className="font-semibold text-white/90">g0v Slack Archive</span>
         </div>
@@ -400,6 +400,8 @@ export const App: React.FC = () => {
           onOpenDirectory={navigateToDirectory}
           onOpenSwitcher={() => openPalette('switcher')}
           onOpenSearch={() => openPalette('search')}
+          theme={theme}
+          onToggleTheme={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
         />
 
         {/* Center Pane */}
@@ -426,6 +428,7 @@ export const App: React.FC = () => {
                 onToggleInfo={handleToggleInfo}
                 onSelectMonth={(m) => navigateToChannel(activeChannelId, m)}
                 onOpenMobileSidebar={() => setMobileSidebarOpen(true)}
+                onOpenSwitcher={() => openPalette('switcher')}
                 onNavigateChannel={navigateToChannel}
               />
 

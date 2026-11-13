@@ -290,7 +290,7 @@ export const MessageList: React.FC<MessageListProps> = ({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       {/* Sub-toolbar: loaded month range, sort toggle, quick jump, filter */}
-      <div className="border-b border-[var(--slack-border)] bg-[var(--slack-surface-bg)] px-3 py-1.5 text-xs sm:px-5">
+      <div className="border-b border-[var(--slack-border)] bg-[var(--slack-surface-bg)] px-2.5 py-1 text-[11px] sm:px-5 sm:py-1.5 sm:text-xs">
         <div className="flex items-center justify-between gap-2">
           <div className="slack-scroll flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto whitespace-nowrap text-[var(--slack-text-muted)] sm:flex-wrap sm:gap-2">
             <span className="shrink-0">
@@ -420,7 +420,7 @@ export const MessageList: React.FC<MessageListProps> = ({
         ref={containerRef}
         onScroll={handleScroll}
         onWheel={handleWheel}
-        className="slack-scroll min-h-0 flex-1 overflow-y-auto pb-8"
+        className="slack-scroll min-h-0 flex-1 overflow-x-hidden overflow-y-auto pb-6 sm:pb-8"
       >
         {/* Top infinite-load sentinel / control */}
         <div className="flex items-center justify-center pt-3 pb-1">

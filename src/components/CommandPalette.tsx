@@ -6,16 +6,16 @@ import {
   History,
   Info,
   Loader2,
-  Moon,
+  Palette,
   Search,
   Star,
-  Sun,
   X,
 } from 'lucide-react';
 import { searchArchive } from '../api';
 import type { ChannelSummary, SearchResultItem } from '../types';
 import { formatCompactNumber } from '../utils/format';
 import { getCommandShortcutLabel } from '../utils/platform';
+import { APP_THEMES, getThemeMeta, type AppThemeId } from '../utils/themes';
 import { RichContent } from './RichContent';
 
 export type PaletteMode = 'switcher' | 'search';
@@ -28,12 +28,13 @@ interface CommandPaletteProps {
   recentIds: string[];
   activeChannelId: string;
   viewMode: 'channel' | 'directory';
-  theme: 'light' | 'dark';
+  theme: AppThemeId;
   onClose: () => void;
   onSelectChannel: (channelId: string) => void;
   onJumpToMessage: (channelId: string, month: string, ts: string) => void;
   onOpenDirectory: () => void;
   onToggleTheme: () => void;
+  onSelectTheme?: (theme: AppThemeId) => void;
   onToggleChannelInfo: () => void;
 }
 
@@ -47,7 +48,7 @@ type SwitcherItem =
   | {
       kind: 'action';
       key: string;
-      id: 'directory' | 'theme' | 'info' | 'search-mode';
+      id: 'directory' | 'theme' | 'info' | 'search-mode' | `set-theme:${AppThemeId}`;
       label: string;
       description: string;
       shortcut?: string;
@@ -100,6 +101,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   onJumpToMessage,
   onOpenDirectory,
   onToggleTheme,
+  onSelectTheme,
   onToggleChannelInfo,
 }) => {
   const [mode, setMode] = useState<PaletteMode>(initialMode);
@@ -235,10 +237,16 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
         kind: 'action',
         key: 'act:theme',
         id: 'theme',
-        label:
-          theme === 'dark' ? 'Switch to Light Theme' : 'Switch to Dark Theme',
-        description: 'Toggle Slack light / dark appearance',
+        label: `Cycle Theme (current: ${getThemeMeta(theme).name})`,
+        description: 'Switch between g0v Civic, g0v Night, g0v Jothon, and Slack Classic',
       },
+      ...APP_THEMES.filter((t) => t.id !== theme).map((t) => ({
+        kind: 'action' as const,
+        key: `act:theme:${t.id}`,
+        id: `set-theme:${t.id}` as const,
+        label: `Theme: ${t.name}`,
+        description: t.subtitle,
+      })),
     ];
 
     if (viewMode === 'channel') {
@@ -258,7 +266,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
             a.label.toLowerCase().includes(qLower) ||
             a.description.toLowerCase().includes(qLower)
         )
-      : actions;
+      : actions.filter((a) => !a.id.startsWith('set-theme:'));
 
     // Put message search action right after channel matches (or first if no channels matched)
     if (q) {
@@ -349,6 +357,10 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
         onClose();
       } else if (item.id === 'theme') {
         onToggleTheme();
+        onClose();
+      } else if (item.id.startsWith('set-theme:')) {
+        const nextTheme = item.id.replace('set-theme:', '') as AppThemeId;
+        onSelectTheme?.(nextTheme);
         onClose();
       } else if (item.id === 'info') {
         onToggleChannelInfo();
@@ -686,10 +698,8 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                   const ActionIcon =
                     item.id === 'directory'
                       ? Compass
-                      : item.id === 'theme'
-                        ? theme === 'dark'
-                          ? Sun
-                          : Moon
+                      : item.id === 'theme' || item.id.startsWith('set-theme:')
+                        ? Palette
                         : item.id === 'info'
                           ? Info
                           : Search;

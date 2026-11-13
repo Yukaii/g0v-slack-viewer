@@ -6,14 +6,15 @@ import {
   ExternalLink,
   Hash,
   Search,
-  Moon,
+  Palette,
   Star,
-  Sun,
   X,
 } from 'lucide-react';
 import type { ArchiveStats, ChannelSummary } from '../types';
 import { formatCompactNumber } from '../utils/format';
 import { getCommandShortcutLabel } from '../utils/platform';
+import { getThemeMeta, type AppThemeId } from '../utils/themes';
+import { G0vLogo } from './G0vLogo';
 
 interface SidebarProps {
   channels: ChannelSummary[];
@@ -28,7 +29,7 @@ interface SidebarProps {
   onOpenDirectory: () => void;
   onOpenSwitcher: () => void;
   onOpenSearch: () => void;
-  theme: 'light' | 'dark';
+  theme: AppThemeId;
   onToggleTheme: () => void;
 }
 
@@ -49,6 +50,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onToggleTheme,
 }) => {
   const shortcutLabel = useMemo(() => getCommandShortcutLabel(), []);
+  const themeMeta = getThemeMeta(theme);
   const [filter, setFilter] = useState('');
   const [starredOpen, setStarredOpen] = useState(true);
   const [recentOpen, setRecentOpen] = useState(true);
@@ -132,12 +134,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="flex items-center justify-between border-b border-[var(--slack-sidebar-border)] px-4 py-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-rose-600 text-xs font-black text-white shadow-xs">
-              g0v
-            </span>
-            <span className="truncate text-base font-extrabold tracking-tight text-white">
-              g0v.tw
-            </span>
+            <G0vLogo size="md" />
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="truncate text-base font-extrabold tracking-tight text-white">
+                  g0v.tw
+                </span>
+                <span className="rounded bg-white/10 px-1.5 py-0.2 text-[10px] font-medium text-white/75">
+                  零時政府
+                </span>
+              </div>
+            </div>
           </div>
           {stats && (
             <div className="mt-0.5 truncate text-[11px] text-white/60">
@@ -321,17 +328,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           onClick={onToggleTheme}
           className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-white/80 hover:bg-white/10 hover:text-white"
         >
-          {theme === 'dark' ? (
-            <>
-              <Sun className="h-3.5 w-3.5" />
-              <span>Light Mode</span>
-            </>
-          ) : (
-            <>
-              <Moon className="h-3.5 w-3.5" />
-              <span>Dark Mode</span>
-            </>
-          )}
+          <Palette className="h-3.5 w-3.5" />
+          <span>Theme: {themeMeta.name}</span>
         </button>
         <a
           href="https://g0v-slack-archive.g0v.ronny.tw/"

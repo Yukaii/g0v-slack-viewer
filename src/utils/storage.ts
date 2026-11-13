@@ -1,3 +1,5 @@
+import type { AppThemeId } from './themes';
+
 const STARRED_KEY = 'g0v_slack_starred_channels';
 const THEME_KEY = 'g0v_slack_theme';
 const RECENT_KEY = 'g0v_slack_recent_channels';
@@ -29,19 +31,28 @@ export function saveStarredChannels(ids: string[]): void {
   }
 }
 
-export function loadTheme(): 'light' | 'dark' {
+export function loadTheme(): AppThemeId {
   try {
     const raw = localStorage.getItem(THEME_KEY);
-    if (raw === 'dark' || raw === 'light') return raw;
+    if (
+      raw === 'g0v-light' ||
+      raw === 'g0v-dark' ||
+      raw === 'g0v-jothon' ||
+      raw === 'slack-classic'
+    ) {
+      return raw;
+    }
+    if (raw === 'dark') return 'g0v-dark';
+    if (raw === 'light') return 'g0v-light';
     return window.matchMedia?.('(prefers-color-scheme: dark)').matches
-      ? 'dark'
-      : 'light';
+      ? 'g0v-dark'
+      : 'g0v-light';
   } catch {
-    return 'light';
+    return 'g0v-light';
   }
 }
 
-export function saveTheme(theme: 'light' | 'dark'): void {
+export function saveTheme(theme: AppThemeId): void {
   try {
     localStorage.setItem(THEME_KEY, theme);
   } catch {

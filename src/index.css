@@ -1,6 +1,78 @@
 @import "tailwindcss";
 
-:root {
+/* Default main experience: g0v Civic (Light) */
+:root,
+html[data-theme="g0v-light"] {
+  --slack-sidebar-bg: #18181b;
+  --slack-sidebar-hover: #27272a;
+  --slack-sidebar-active: #c8161d;
+  --slack-sidebar-text: #d4d4d8;
+  --slack-sidebar-text-bright: #ffffff;
+  --slack-sidebar-border: rgba(255, 255, 255, 0.1);
+  --slack-top-bg: #111113;
+  --g0v-brand-accent: #c8161d;
+
+  --slack-main-bg: #ffffff;
+  --slack-surface-bg: #f7f7f9;
+  --slack-surface-hover: #f4f4f6;
+  --slack-border: #e4e4e7;
+  --slack-text: #18181b;
+  --slack-text-muted: #52525b;
+  --slack-link: #b91c1c;
+  --slack-accent: #c8161d;
+  --slack-badge-bg: #f0f0f3;
+  --slack-highlight-bg: rgba(200, 22, 29, 0.1);
+}
+
+/* g0v Night (Dark hacker mode) */
+html[data-theme="g0v-dark"],
+html.dark {
+  --slack-sidebar-bg: #111114;
+  --slack-sidebar-hover: #1e1e24;
+  --slack-sidebar-active: #c8161d;
+  --slack-sidebar-text: #a1a1aa;
+  --slack-sidebar-text-bright: #ffffff;
+  --slack-sidebar-border: rgba(255, 255, 255, 0.08);
+  --slack-top-bg: #09090b;
+  --g0v-brand-accent: #ef4444;
+
+  --slack-main-bg: #16161a;
+  --slack-surface-bg: #1e1e24;
+  --slack-surface-hover: #212128;
+  --slack-border: #2d2d35;
+  --slack-text: #e4e4e7;
+  --slack-text-muted: #9ca3af;
+  --slack-link: #f87171;
+  --slack-accent: #ef4444;
+  --slack-badge-bg: #27272f;
+  --slack-highlight-bg: rgba(239, 68, 68, 0.16);
+}
+
+/* g0v Jothon (Summit jade & warm civic paper) */
+html[data-theme="g0v-jothon"] {
+  --slack-sidebar-bg: #0f292e;
+  --slack-sidebar-hover: #173a40;
+  --slack-sidebar-active: #c8161d;
+  --slack-sidebar-text: #cbd5e1;
+  --slack-sidebar-text-bright: #ffffff;
+  --slack-sidebar-border: rgba(255, 255, 255, 0.12);
+  --slack-top-bg: #0b1f23;
+  --g0v-brand-accent: #d97706;
+
+  --slack-main-bg: #faf8f4;
+  --slack-surface-bg: #f3efe6;
+  --slack-surface-hover: #efeae0;
+  --slack-border: #e5dec9;
+  --slack-text: #1c1917;
+  --slack-text-muted: #57534e;
+  --slack-link: #0f766e;
+  --slack-accent: #c8161d;
+  --slack-badge-bg: #ebe5d6;
+  --slack-highlight-bg: rgba(217, 119, 6, 0.14);
+}
+
+/* Slack Classic (Optional traditional purple) */
+html[data-theme="slack-classic"] {
   --slack-sidebar-bg: #3f0e40;
   --slack-sidebar-hover: #350d36;
   --slack-sidebar-active: #1164a3;
@@ -8,6 +80,7 @@
   --slack-sidebar-text-bright: #ffffff;
   --slack-sidebar-border: rgba(255, 255, 255, 0.12);
   --slack-top-bg: #350d36;
+  --g0v-brand-accent: #1164a3;
 
   --slack-main-bg: #ffffff;
   --slack-surface-bg: #f8f8fa;
@@ -19,27 +92,6 @@
   --slack-accent: #1164a3;
   --slack-badge-bg: #f2f2f4;
   --slack-highlight-bg: #fff8dc;
-}
-
-html.dark {
-  --slack-sidebar-bg: #19171d;
-  --slack-sidebar-hover: #27242c;
-  --slack-sidebar-active: #1164a3;
-  --slack-sidebar-text: #ababad;
-  --slack-sidebar-text-bright: #ffffff;
-  --slack-sidebar-border: rgba(255, 255, 255, 0.08);
-  --slack-top-bg: #121016;
-
-  --slack-main-bg: #1a1d21;
-  --slack-surface-bg: #222529;
-  --slack-surface-hover: #222529;
-  --slack-border: #35373b;
-  --slack-text: #d1d2d3;
-  --slack-text-muted: #9a9b9e;
-  --slack-link: #1d9bd1;
-  --slack-accent: #1d9bd1;
-  --slack-badge-bg: #2c2d30;
-  --slack-highlight-bg: rgba(232, 168, 56, 0.14);
 }
 
 html,

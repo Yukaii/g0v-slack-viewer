@@ -3,10 +3,8 @@ import {
   AlertCircle,
   ExternalLink,
   Loader2,
-  Moon,
   RefreshCw,
   Search,
-  Sun,
 } from 'lucide-react';
 import { fetchChannelMessages, fetchChannels, fetchStats } from './api';
 import type {
@@ -33,6 +31,9 @@ import { ChannelDirectory } from './components/ChannelDirectory';
 import { CommandPalette, type PaletteMode } from './components/CommandPalette';
 import { getCommandShortcutLabel } from './utils/platform';
 import { ImageLightbox } from './components/ImageLightbox';
+import { G0vLogo } from './components/G0vLogo';
+import { ThemePicker } from './components/ThemePicker';
+import { APP_THEMES, getThemeMeta, type AppThemeId } from './utils/themes';
 
 const DEFAULT_CHANNEL_ID = 'C02G2SXKX'; // #general
 
@@ -87,7 +88,7 @@ function mergeMessages(
 export const App: React.FC = () => {
   const initialRoute = useMemo(() => parseLocation(), []);
 
-  const [theme, setTheme] = useState<'light' | 'dark'>(() => loadTheme());
+  const [theme, setTheme] = useState<AppThemeId>(() => loadTheme());
   const [stats, setStats] = useState<ArchiveStats | null>(null);
   const [channels, setChannels] = useState<ChannelSummary[]>([]);
   const [starredIds, setStarredIds] = useState<string[]>(() =>
@@ -131,10 +132,19 @@ export const App: React.FC = () => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [previewFile, setPreviewFile] = useState<MessageFile | null>(null);
 
-  // Apply theme class to <html>
+  const cycleTheme = useCallback(() => {
+    setTheme((prev) => {
+      const idx = APP_THEMES.findIndex((t) => t.id === prev);
+      return APP_THEMES[(idx + 1) % APP_THEMES.length].id;
+    });
+  }, []);
+
+  // Apply data-theme attribute and dark class to <html>
   useEffect(() => {
     const root = document.documentElement;
-    if (theme === 'dark') {
+    const meta = getThemeMeta(theme);
+    root.setAttribute('data-theme', theme);
+    if (meta.isDark) {
       root.classList.add('dark');
     } else {
       root.classList.remove('dark');
@@ -335,9 +345,13 @@ export const App: React.FC = () => {
   return (
     <div className="flex h-dvh w-full max-w-full flex-col overflow-hidden bg-[var(--slack-main-bg)] text-[var(--slack-text)]">
       {/* Top Slack Workspace Bar */}
-      <div className="hidden h-11 shrink-0 items-center justify-between gap-3 bg-[var(--slack-top-bg)] px-3 text-white sm:flex">
-        <div className="hidden w-56 items-center gap-2 text-xs text-white/70 md:flex">
-          <span className="font-semibold text-white/90">g0v Slack Archive</span>
+      <div className="hidden h-11 shrink-0 items-center justify-between gap-3 border-b-2 border-[var(--g0v-brand-accent)] bg-[var(--slack-top-bg)] px-3 text-white sm:flex">
+        <div className="hidden w-56 items-center gap-2 text-xs text-white/75 md:flex">
+          <G0vLogo size="sm" />
+          <span className="font-bold tracking-tight text-white">g0v Slack Archive</span>
+          <span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-medium text-white/75">
+            零時政府
+          </span>
         </div>
 
         {/* Centered Global Search Trigger */}
@@ -358,20 +372,7 @@ export const App: React.FC = () => {
 
         {/* Right utility controls */}
         <div className="flex shrink-0 items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
-            title={
-              theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'
-            }
-            className="rounded-md p-1.5 text-white/80 hover:bg-white/15 hover:text-white"
-          >
-            {theme === 'dark' ? (
-              <Sun className="h-4 w-4" />
-            ) : (
-              <Moon className="h-4 w-4" />
-            )}
-          </button>
+          <ThemePicker theme={theme} onSelectTheme={setTheme} />
           <a
             href="https://g0v-slack-archive.g0v.ronny.tw/"
             target="_blank"
@@ -401,7 +402,7 @@ export const App: React.FC = () => {
           onOpenSwitcher={() => openPalette('switcher')}
           onOpenSearch={() => openPalette('search')}
           theme={theme}
-          onToggleTheme={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
+          onToggleTheme={cycleTheme}
         />
 
         {/* Center Pane */}
@@ -521,7 +522,7 @@ export const App: React.FC = () => {
         onSelectChannel={(cid) => navigateToChannel(cid)}
         onJumpToMessage={(cid, m, ts) => navigateToChannel(cid, m, ts)}
         onOpenDirectory={navigateToDirectory}
-        onToggleTheme={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
+        onToggleTheme={cycleTheme}
         onToggleChannelInfo={handleToggleInfo}
       />
 

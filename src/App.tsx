@@ -346,10 +346,12 @@ export const App: React.FC = () => {
     <div className="flex h-dvh w-full max-w-full flex-col overflow-hidden bg-[var(--slack-main-bg)] text-[var(--slack-text)]">
       {/* Top Slack Workspace Bar */}
       <div className="hidden h-11 shrink-0 items-center justify-between gap-3 border-b-2 border-[var(--g0v-brand-accent)] bg-[var(--slack-top-bg)] px-3 text-white sm:flex">
-        <div className="hidden w-56 items-center gap-2 text-xs text-white/75 md:flex">
-          <G0vLogo size="sm" />
-          <span className="font-bold tracking-tight text-white">g0v Slack Archive</span>
-          <span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-medium text-white/75">
+        <div className="hidden w-56 shrink-0 items-center gap-2 text-xs text-white/75 md:flex">
+          <G0vLogo variant="wordmark" size="sm" />
+          <span className="whitespace-nowrap font-semibold tracking-tight text-white">
+            Slack Archive
+          </span>
+          <span className="shrink-0 rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-medium text-white/75">
             零時政府
           </span>
         </div>

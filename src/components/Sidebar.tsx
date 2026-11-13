@@ -133,8 +133,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Workspace Header */}
       <div className="flex items-center justify-between border-b border-[var(--slack-sidebar-border)] px-4 py-3">
         <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <G0vLogo size="md" />
+          <div className="flex items-center gap-2.5">
+            <G0vLogo variant="icon" size="md" />
             <div className="min-w-0">
               <div className="flex items-center gap-1.5">
                 <span className="truncate text-base font-extrabold tracking-tight text-white">

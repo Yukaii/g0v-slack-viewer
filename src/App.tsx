@@ -30,7 +30,8 @@ import { MessageList } from './components/MessageList';
 import { ThreadPanel } from './components/ThreadPanel';
 import { ChannelInfoPanel } from './components/ChannelInfoPanel';
 import { ChannelDirectory } from './components/ChannelDirectory';
-import { SearchModal } from './components/SearchModal';
+import { CommandPalette, type PaletteMode } from './components/CommandPalette';
+import { getCommandShortcutLabel } from './utils/platform';
 import { ImageLightbox } from './components/ImageLightbox';
 
 const DEFAULT_CHANNEL_ID = 'C02G2SXKX'; // #general
@@ -124,7 +125,9 @@ export const App: React.FC = () => {
 
   const [activeThread, setActiveThread] = useState<ArchiveMessage | null>(null);
   const [showChannelInfo, setShowChannelInfo] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [paletteMode, setPaletteMode] = useState<PaletteMode>('switcher');
+  const shortcutLabel = useMemo(() => getCommandShortcutLabel(), []);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [previewFile, setPreviewFile] = useState<MessageFile | null>(null);
 
@@ -139,17 +142,40 @@ export const App: React.FC = () => {
     saveTheme(theme);
   }, [theme]);
 
-  // Global Cmd/Ctrl + K shortcut for search
+  const openPalette = useCallback((mode: PaletteMode) => {
+    setPaletteMode(mode);
+    setPaletteOpen(true);
+  }, []);
+
+  // Global Slack-like keyboard shortcuts (Cmd/Ctrl+K Quick Switcher, Cmd/Ctrl+Shift+K Directory)
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
-        setSearchOpen((v) => !v);
+        if (e.shiftKey) {
+          setPaletteOpen(false);
+          setViewMode('directory');
+          setActiveThread(null);
+          setShowChannelInfo(false);
+          window.history.pushState(null, '', '/channels');
+          return;
+        }
+        setPaletteOpen((prevOpen) => {
+          if (!prevOpen) {
+            setPaletteMode('switcher');
+            return true;
+          }
+          if (paletteMode !== 'switcher') {
+            setPaletteMode('switcher');
+            return true;
+          }
+          return false;
+        });
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, []);
+  }, [paletteMode]);
 
   // Load workspace stats & channels on mount
   useEffect(() => {
@@ -317,15 +343,15 @@ export const App: React.FC = () => {
         {/* Centered Global Search Trigger */}
         <button
           type="button"
-          onClick={() => setSearchOpen(true)}
+          onClick={() => openPalette('switcher')}
           className="flex h-7 w-full max-w-xl items-center justify-between rounded-md border border-white/15 bg-white/15 px-3 text-xs text-white/85 transition hover:bg-white/25"
         >
           <span className="flex items-center gap-2 truncate">
             <Search className="h-3.5 w-3.5 shrink-0" />
-            <span className="truncate">Search g0v.tw archived messages...</span>
+            <span className="truncate">Jump to channel or search g0v.tw...</span>
           </span>
           <kbd className="hidden rounded bg-black/25 px-1.5 py-0.5 text-[10px] font-medium text-white/80 sm:inline">
-            ⌘K
+            {shortcutLabel}
           </kbd>
         </button>
 
@@ -371,7 +397,8 @@ export const App: React.FC = () => {
           onCloseMobile={() => setMobileSidebarOpen(false)}
           onSelectChannel={(cid) => navigateToChannel(cid)}
           onOpenDirectory={navigateToDirectory}
-          onOpenSearch={() => setSearchOpen(true)}
+          onOpenSwitcher={() => openPalette('switcher')}
+          onOpenSearch={() => openPalette('search')}
         />
 
         {/* Center Pane */}
@@ -477,10 +504,21 @@ export const App: React.FC = () => {
       </div>
 
       {/* Modals */}
-      <SearchModal
-        open={searchOpen}
-        onClose={() => setSearchOpen(false)}
+      <CommandPalette
+        open={paletteOpen}
+        initialMode={paletteMode}
+        channels={channels}
+        starredIds={starredIds}
+        recentIds={recentIds}
+        activeChannelId={activeChannelId}
+        viewMode={viewMode}
+        theme={theme}
+        onClose={() => setPaletteOpen(false)}
+        onSelectChannel={(cid) => navigateToChannel(cid)}
         onJumpToMessage={(cid, m, ts) => navigateToChannel(cid, m, ts)}
+        onOpenDirectory={navigateToDirectory}
+        onToggleTheme={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
+        onToggleChannelInfo={handleToggleInfo}
       />
 
       <ImageLightbox

@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import type { ArchiveStats, ChannelSummary } from '../types';
 import { formatCompactNumber } from '../utils/format';
+import { getCommandShortcutLabel } from '../utils/platform';
 
 interface SidebarProps {
   channels: ChannelSummary[];
@@ -22,6 +23,7 @@ interface SidebarProps {
   onCloseMobile: () => void;
   onSelectChannel: (channelId: string) => void;
   onOpenDirectory: () => void;
+  onOpenSwitcher: () => void;
   onOpenSearch: () => void;
 }
 
@@ -36,8 +38,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onCloseMobile,
   onSelectChannel,
   onOpenDirectory,
+  onOpenSwitcher,
   onOpenSearch,
 }) => {
+  const shortcutLabel = useMemo(() => getCommandShortcutLabel(), []);
   const [filter, setFilter] = useState('');
   const [starredOpen, setStarredOpen] = useState(true);
   const [recentOpen, setRecentOpen] = useState(true);
@@ -169,16 +173,28 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <button
           type="button"
           onClick={() => {
-            onOpenSearch();
+            onOpenSwitcher();
             onCloseMobile();
           }}
           className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-sm font-medium text-[var(--slack-sidebar-text)] transition-colors hover:bg-[var(--slack-sidebar-hover)] hover:text-white"
         >
           <Search className="h-4 w-4 shrink-0" />
-          <span>Search Archive</span>
+          <span>Jump to…</span>
           <kbd className="ml-auto rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-medium text-white/75">
-            ⌘K
+            {shortcutLabel}
           </kbd>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            onOpenSearch();
+            onCloseMobile();
+          }}
+          className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-sm font-medium text-[var(--slack-sidebar-text)] transition-colors hover:bg-[var(--slack-sidebar-hover)] hover:text-white"
+        >
+          <Search className="h-4 w-4 shrink-0 opacity-75" />
+          <span>Search Messages</span>
         </button>
       </div>
 
@@ -190,7 +206,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             type="text"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            placeholder="Jump to channel..."
+            placeholder="Filter sidebar channels..."
             className="w-full rounded-md border border-white/15 bg-white/10 py-1 pr-7 pl-8 text-xs text-white placeholder:text-white/50 focus:border-white/35 focus:bg-white/15 focus:outline-none"
           />
           {filter && (

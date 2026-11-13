@@ -62,7 +62,7 @@ export const ChannelDirectory: React.FC<ChannelDirectoryProps> = ({
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-[var(--slack-main-bg)]">
       {/* Header */}
-      <div className="border-b border-[var(--slack-border)] px-5 py-3.5">
+      <div className="border-b border-[var(--slack-border)] px-3 py-3 sm:px-5 sm:py-3.5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <button
@@ -86,15 +86,15 @@ export const ChannelDirectory: React.FC<ChannelDirectoryProps> = ({
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative">
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+            <div className="relative min-w-0 flex-1 sm:flex-initial">
               <Search className="pointer-events-none absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2 text-[var(--slack-text-muted)]" />
               <input
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search channels, topics..."
-                className="w-60 rounded-lg border border-[var(--slack-border)] bg-[var(--slack-surface-bg)] py-1.5 pr-8 pl-8 text-sm text-[var(--slack-text)] placeholder:text-[var(--slack-text-muted)] focus:border-[var(--slack-accent)] focus:outline-none sm:w-72"
+                className="w-full rounded-lg border border-[var(--slack-border)] bg-[var(--slack-surface-bg)] py-1.5 pr-8 pl-8 text-sm text-[var(--slack-text)] placeholder:text-[var(--slack-text-muted)] focus:border-[var(--slack-accent)] focus:outline-none sm:w-72"
               />
               {query && (
                 <button
@@ -132,10 +132,10 @@ export const ChannelDirectory: React.FC<ChannelDirectoryProps> = ({
             <div
               key={ch.id}
               onClick={() => onSelectChannel(ch.id)}
-              className="group flex cursor-pointer items-start justify-between gap-4 px-5 py-3.5 transition-colors hover:bg-[var(--slack-surface-hover)]"
+              className="group flex cursor-pointer items-start justify-between gap-4 px-3 py-3 sm:px-5 sm:py-3.5 transition-colors hover:bg-[var(--slack-surface-hover)]"
             >
               <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
                   <span className="inline-flex items-center gap-1 text-[15px] font-bold text-[var(--slack-text)] group-hover:text-[var(--slack-link)]">
                     <Hash className="h-4 w-4 text-[var(--slack-text-muted)]" />
                     {ch.name}

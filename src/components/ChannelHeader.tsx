@@ -1,6 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Calendar,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Hash,
@@ -40,6 +41,7 @@ export const ChannelHeader: React.FC<ChannelHeaderProps> = ({
   onOpenMobileSidebar,
   onNavigateChannel,
 }) => {
+  const [mobileTimelineOpen, setMobileTimelineOpen] = useState(false);
   const activeYear = detail?.activeMonth?.slice(0, 4) || '';
   const activeYearEntry = useMemo(
     () => detail?.years.find((y) => y.year === activeYear),
@@ -123,9 +125,65 @@ export const ChannelHeader: React.FC<ChannelHeaderProps> = ({
         </div>
       </div>
 
+      {/* Compact Mobile Timeline Toggle Row */}
+      {detail && detail.years.length > 0 && (
+        <div className="flex items-center justify-between gap-2 border-t border-[var(--slack-border)] bg-[var(--slack-surface-bg)] px-3 py-1.5 sm:hidden">
+          <button
+            type="button"
+            onClick={() => setMobileTimelineOpen((v) => !v)}
+            className="inline-flex items-center gap-1.5 rounded-md border border-[var(--slack-border)] bg-[var(--slack-main-bg)] px-2.5 py-1 text-xs font-medium text-[var(--slack-text)]"
+          >
+            <Calendar className="h-3.5 w-3.5 text-[var(--slack-accent)]" />
+            <span className="font-mono-code">
+              {loadedMonths.length > 1
+                ? `${loadedMonths[0]}–${loadedMonths[loadedMonths.length - 1]}`
+                : detail.activeMonth}
+            </span>
+            <ChevronDown
+              className={`h-3.5 w-3.5 text-[var(--slack-text-muted)] transition-transform ${
+                mobileTimelineOpen ? 'rotate-180' : ''
+              }`}
+            />
+          </button>
+
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              disabled={!detail.previousMonth || loading}
+              onClick={() =>
+                detail.previousMonth && onSelectMonth(detail.previousMonth)
+              }
+              aria-label="Previous month"
+              className="inline-flex items-center rounded border border-[var(--slack-border)] bg-[var(--slack-main-bg)] p-1 text-xs text-[var(--slack-text-muted)] disabled:opacity-35"
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              disabled={!detail.nextMonth || loading}
+              onClick={() => detail.nextMonth && onSelectMonth(detail.nextMonth)}
+              aria-label="Next month"
+              className="inline-flex items-center rounded border border-[var(--slack-border)] bg-[var(--slack-main-bg)] p-1 text-xs text-[var(--slack-text-muted)] disabled:opacity-35"
+            >
+              <ChevronRight className="h-3.5 w-3.5" />
+            </button>
+            {latestMonth && detail.activeMonth !== latestMonth && (
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => onSelectMonth(latestMonth)}
+                className="rounded border border-[var(--slack-border)] bg-[var(--slack-main-bg)] px-2 py-0.5 text-[11px] font-medium text-[var(--slack-link)]"
+              >
+                Latest
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Year / Month timeline navigator */}
       {detail && detail.years.length > 0 && (
-        <div className="flex flex-col gap-1.5 border-t border-[var(--slack-border)] bg-[var(--slack-surface-bg)] px-4 py-2 sm:px-5">
+        <div className={`${mobileTimelineOpen ? 'flex' : 'hidden sm:flex'} flex-col gap-1.5 border-t border-[var(--slack-border)] bg-[var(--slack-surface-bg)] px-3 py-2 sm:px-5`}>
           {/* Years row + prev/next controls */}
           <div className="flex items-center justify-between gap-2">
             <div className="slack-scroll flex items-center gap-1 overflow-x-auto pb-0.5">

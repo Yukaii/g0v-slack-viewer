@@ -333,7 +333,7 @@ export const App: React.FC = () => {
   const sessionKey = `${activeChannelId}:${channelDetail?.activeMonth ?? requestedMonth ?? 'latest'}`;
 
   return (
-    <div className="flex h-screen w-screen flex-col overflow-hidden bg-[var(--slack-main-bg)] text-[var(--slack-text)]">
+    <div className="flex h-dvh w-screen flex-col overflow-hidden bg-[var(--slack-main-bg)] text-[var(--slack-text)]">
       {/* Top Slack Workspace Bar */}
       <div className="flex h-11 shrink-0 items-center justify-between gap-3 bg-[var(--slack-top-bg)] px-3 text-white">
         <div className="hidden w-56 items-center gap-2 text-xs text-white/70 md:flex">
@@ -348,7 +348,8 @@ export const App: React.FC = () => {
         >
           <span className="flex items-center gap-2 truncate">
             <Search className="h-3.5 w-3.5 shrink-0" />
-            <span className="truncate">Jump to channel or search g0v.tw...</span>
+            <span className="truncate sm:hidden">Jump or search…</span>
+            <span className="hidden truncate sm:inline">Jump to channel or search g0v.tw...</span>
           </span>
           <kbd className="hidden rounded bg-black/25 px-1.5 py-0.5 text-[10px] font-medium text-white/80 sm:inline">
             {shortcutLabel}

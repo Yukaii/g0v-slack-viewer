@@ -440,11 +440,11 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/55 px-4 pt-12 backdrop-blur-xs sm:pt-16"
+      className="fixed inset-0 z-50 flex items-start justify-center bg-black/55 px-2.5 pt-3 backdrop-blur-xs sm:px-4 sm:pt-16"
       onClick={onClose}
     >
       <div
-        className="flex max-h-[82vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-[var(--slack-border)] bg-[var(--slack-main-bg)] shadow-2xl"
+        className="flex max-h-[88dvh] w-full max-w-2xl sm:max-h-[82vh] flex-col overflow-hidden rounded-xl border border-[var(--slack-border)] bg-[var(--slack-main-bg)] shadow-2xl"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={handleKeyDown}
       >

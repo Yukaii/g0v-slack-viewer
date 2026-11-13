@@ -74,6 +74,7 @@ export const MessageList: React.FC<MessageListProps> = ({
   const [localFilter, setLocalFilter] = useState('');
   const [showHiddenReplies, setShowHiddenReplies] = useState(false);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const initialReadyRef = useRef(false);
@@ -289,83 +290,129 @@ export const MessageList: React.FC<MessageListProps> = ({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       {/* Sub-toolbar: loaded month range, sort toggle, quick jump, filter */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--slack-border)] bg-[var(--slack-surface-bg)] px-5 py-1.5 text-xs">
-        <div className="flex flex-wrap items-center gap-2 text-[var(--slack-text-muted)]">
-          <span>
-            Showing{' '}
-            <strong className="text-[var(--slack-text)]">
-              {visibleMessages.length}
-            </strong>{' '}
-            messages{' '}
-            {monthRangeLabel && (
-              <>
-                in <span className="font-mono-code">{monthRangeLabel}</span>
-              </>
+      <div className="border-b border-[var(--slack-border)] bg-[var(--slack-surface-bg)] px-3 py-1.5 text-xs sm:px-5">
+        <div className="flex items-center justify-between gap-2">
+          <div className="slack-scroll flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto whitespace-nowrap text-[var(--slack-text-muted)] sm:flex-wrap sm:gap-2">
+            <span className="shrink-0">
+              <span className="hidden sm:inline">Showing </span>
+              <strong className="text-[var(--slack-text)]">
+                {visibleMessages.length}
+              </strong>{' '}
+              <span className="sm:hidden">msgs</span>
+              <span className="hidden sm:inline">messages</span>
+              {monthRangeLabel && (
+                <span className="hidden md:inline">
+                  {' '}
+                  in <span className="font-mono-code">{monthRangeLabel}</span>
+                </span>
+              )}
+            </span>
+
+            <button
+              type="button"
+              onClick={() =>
+                setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'))
+              }
+              className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[var(--slack-border)] bg-[var(--slack-main-bg)] px-2 py-0.5 text-[var(--slack-text-muted)] transition hover:text-[var(--slack-text)]"
+              title="Toggle chronological order"
+            >
+              <ArrowUpDown className="h-3 w-3" />
+              <span className="sm:hidden">{sortOrder === 'asc' ? 'Oldest' : 'Latest'}</span>
+              <span className="hidden sm:inline">
+                {sortOrder === 'asc' ? 'Oldest → Latest' : 'Latest → Oldest'}
+              </span>
+            </button>
+
+            {sortOrder === 'asc' && visibleMessages.length > 5 && (
+              <button
+                type="button"
+                onClick={scrollToLatest}
+                className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[var(--slack-border)] bg-[var(--slack-main-bg)] px-2 py-0.5 text-[var(--slack-link)] transition hover:bg-[var(--slack-badge-bg)]"
+                title="Scroll to latest loaded message"
+              >
+                <ArrowDown className="h-3 w-3" />
+                Latest
+              </button>
             )}
-          </span>
+
+            {hiddenReplyCount > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowHiddenReplies((v) => !v)}
+                className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 transition ${
+                  showHiddenReplies
+                    ? 'border-[var(--slack-accent)] bg-[var(--slack-accent)]/10 text-[var(--slack-link)]'
+                    : 'border-[var(--slack-border)] hover:bg-[var(--slack-badge-bg)]'
+                }`}
+                title="Thread replies are grouped under their parent message; toggle to also show replies whose parent was posted in an earlier month"
+              >
+                <Filter className="h-3 w-3" />
+                <span className="sm:hidden">+{hiddenReplyCount}</span>
+                <span className="hidden sm:inline">
+                  {showHiddenReplies
+                    ? `Hiding ${hiddenReplyCount} thread replies`
+                    : `+${hiddenReplyCount} thread replies`}
+                </span>
+              </button>
+            )}
+          </div>
 
           <button
             type="button"
-            onClick={() =>
-              setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'))
-            }
-            className="inline-flex items-center gap-1 rounded-full border border-[var(--slack-border)] bg-[var(--slack-main-bg)] px-2 py-0.5 text-[var(--slack-text-muted)] transition hover:text-[var(--slack-text)]"
-            title="Toggle chronological order"
+            onClick={() => setMobileFilterOpen((v) => !v)}
+            className={`inline-flex shrink-0 items-center gap-1 rounded-md border px-2 py-1 sm:hidden ${
+              mobileFilterOpen || localFilter
+                ? 'border-[var(--slack-accent)] bg-[var(--slack-accent)]/10 text-[var(--slack-link)]'
+                : 'border-[var(--slack-border)] bg-[var(--slack-main-bg)] text-[var(--slack-text-muted)]'
+            }`}
+            aria-label="Filter messages"
           >
-            <ArrowUpDown className="h-3 w-3" />
-            {sortOrder === 'asc' ? 'Oldest → Latest' : 'Latest → Oldest'}
+            <Search className="h-3.5 w-3.5" />
           </button>
 
-          {sortOrder === 'asc' && visibleMessages.length > 5 && (
-            <button
-              type="button"
-              onClick={scrollToLatest}
-              className="inline-flex items-center gap-1 rounded-full border border-[var(--slack-border)] bg-[var(--slack-main-bg)] px-2 py-0.5 text-[var(--slack-link)] transition hover:bg-[var(--slack-badge-bg)]"
-              title="Scroll to latest loaded message"
-            >
-              <ArrowDown className="h-3 w-3" />
-              Latest
-            </button>
-          )}
-
-          {hiddenReplyCount > 0 && (
-            <button
-              type="button"
-              onClick={() => setShowHiddenReplies((v) => !v)}
-              className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 transition ${
-                showHiddenReplies
-                  ? 'border-[var(--slack-accent)] bg-[var(--slack-accent)]/10 text-[var(--slack-link)]'
-                  : 'border-[var(--slack-border)] hover:bg-[var(--slack-badge-bg)]'
-              }`}
-              title="Thread replies are grouped under their parent message; toggle to also show replies whose parent was posted in an earlier month"
-            >
-              <Filter className="h-3 w-3" />
-              {showHiddenReplies
-                ? `Hiding ${hiddenReplyCount} thread replies`
-                : `+${hiddenReplyCount} thread replies`}
-            </button>
-          )}
+          <div className="relative hidden items-center sm:flex">
+            <Search className="pointer-events-none absolute left-2 h-3.5 w-3.5 text-[var(--slack-text-muted)]" />
+            <input
+              type="text"
+              value={localFilter}
+              onChange={(e) => setLocalFilter(e.target.value)}
+              placeholder="Filter loaded messages..."
+              className="w-56 rounded-md border border-[var(--slack-border)] bg-[var(--slack-main-bg)] py-1 pr-6 pl-7 text-xs text-[var(--slack-text)] placeholder:text-[var(--slack-text-muted)] focus:border-[var(--slack-accent)] focus:outline-none"
+            />
+            {localFilter && (
+              <button
+                type="button"
+                onClick={() => setLocalFilter('')}
+                className="absolute right-1.5 text-[var(--slack-text-muted)] hover:text-[var(--slack-text)]"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
         </div>
 
-        <div className="relative flex items-center">
-          <Search className="pointer-events-none absolute left-2 h-3.5 w-3.5 text-[var(--slack-text-muted)]" />
-          <input
-            type="text"
-            value={localFilter}
-            onChange={(e) => setLocalFilter(e.target.value)}
-            placeholder="Filter loaded messages..."
-            className="w-44 rounded-md border border-[var(--slack-border)] bg-[var(--slack-main-bg)] py-1 pr-6 pl-7 text-xs text-[var(--slack-text)] placeholder:text-[var(--slack-text-muted)] focus:border-[var(--slack-accent)] focus:outline-none sm:w-56"
-          />
-          {localFilter && (
-            <button
-              type="button"
-              onClick={() => setLocalFilter('')}
-              className="absolute right-1.5 text-[var(--slack-text-muted)] hover:text-[var(--slack-text)]"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
-        </div>
+        {mobileFilterOpen && (
+          <div className="relative mt-1.5 flex items-center sm:hidden">
+            <Search className="pointer-events-none absolute left-2.5 h-3.5 w-3.5 text-[var(--slack-text-muted)]" />
+            <input
+              type="text"
+              value={localFilter}
+              onChange={(e) => setLocalFilter(e.target.value)}
+              placeholder="Filter loaded messages..."
+              autoFocus
+              className="w-full rounded-md border border-[var(--slack-border)] bg-[var(--slack-main-bg)] py-1.5 pr-7 pl-8 text-xs text-[var(--slack-text)] placeholder:text-[var(--slack-text-muted)] focus:border-[var(--slack-accent)] focus:outline-none"
+            />
+            {localFilter && (
+              <button
+                type="button"
+                onClick={() => setLocalFilter('')}
+                className="absolute right-2 text-[var(--slack-text-muted)] hover:text-[var(--slack-text)]"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Scrollable feed with infinite loading */}

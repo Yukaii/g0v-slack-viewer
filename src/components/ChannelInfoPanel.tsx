@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  ArrowLeft,
   Calendar,
   ExternalLink,
   Hash,
@@ -30,9 +31,17 @@ export const ChannelInfoPanel: React.FC<ChannelInfoPanelProps> = ({
   )}`;
 
   return (
-    <aside className="flex h-full w-full flex-col border-l border-[var(--slack-border)] bg-[var(--slack-surface-bg)] md:w-[340px] shrink-0">
+    <aside className="fixed inset-0 z-40 flex h-dvh w-full shrink-0 flex-col border-l border-[var(--slack-border)] bg-[var(--slack-surface-bg)] md:static md:z-auto md:h-full md:w-[340px]">
       <div className="flex items-center justify-between border-b border-[var(--slack-border)] bg-[var(--slack-main-bg)] px-4 py-3">
-        <div className="flex items-center gap-1.5 font-bold text-[var(--slack-text)]">
+        <div className="flex min-w-0 items-center gap-1.5 font-bold text-[var(--slack-text)]">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md p-1 text-[var(--slack-text-muted)] hover:bg-[var(--slack-badge-bg)] md:hidden"
+            aria-label="Back to channel"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </button>
           <Hash className="h-4 w-4 text-[var(--slack-text-muted)]" />
           <span className="truncate">{channel.name}</span>
         </div>

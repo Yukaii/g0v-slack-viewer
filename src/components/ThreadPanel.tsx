@@ -1,5 +1,5 @@
 import React from 'react';
-import { Hash, X } from 'lucide-react';
+import { ArrowLeft, Hash, X } from 'lucide-react';
 import type { ArchiveMessage, MessageFile } from '../types';
 import { formatShortTime } from '../utils/format';
 import { MessageItem } from './MessageItem';
@@ -25,16 +25,26 @@ export const ThreadPanel: React.FC<ThreadPanelProps> = ({
   onPreviewFile,
 }) => {
   return (
-    <aside className="flex h-full w-full flex-col border-l border-[var(--slack-border)] bg-[var(--slack-main-bg)] md:w-[380px] lg:w-[420px] shrink-0">
+    <aside className="fixed inset-0 z-40 flex h-dvh w-full shrink-0 flex-col border-l border-[var(--slack-border)] bg-[var(--slack-main-bg)] md:static md:z-auto md:h-full md:w-[380px] lg:w-[420px]">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-[var(--slack-border)] px-4 py-3">
-        <div className="min-w-0">
+        <div className="flex min-w-0 items-center gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md p-1 text-[var(--slack-text-muted)] hover:bg-[var(--slack-badge-bg)] md:hidden"
+            aria-label="Back to channel"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </button>
+          <div className="min-w-0">
           <h2 className="text-base font-bold text-[var(--slack-text)]">
             Thread
           </h2>
           <div className="flex items-center gap-1 text-xs text-[var(--slack-text-muted)]">
             <Hash className="h-3 w-3" />
             <span className="truncate">{channelName}</span>
+          </div>
           </div>
         </div>
         <button

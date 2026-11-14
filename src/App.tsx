@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   AlertCircle,
   ExternalLink,
-  Languages,
   Loader2,
   RefreshCw,
   Search,
@@ -39,6 +38,7 @@ import { CommandPalette, type PaletteMode } from './components/CommandPalette';
 import { getCommandShortcutLabel } from './utils/platform';
 import { ImageLightbox } from './components/ImageLightbox';
 import { G0vLogo } from './components/G0vLogo';
+import { LanguagePicker } from './components/LanguagePicker';
 import { ThemePicker } from './components/ThemePicker';
 import { APP_THEMES, getThemeMeta, type AppThemeId } from './utils/themes';
 
@@ -125,7 +125,7 @@ function getInitialRoute(): AppRouteState {
 
 export const App: React.FC = () => {
   const initialRoute = useMemo(() => getInitialRoute(), []);
-  const { t, toggleLocale } = useI18n();
+  const { t } = useI18n();
 
   const [theme, setTheme] = useState<AppThemeId>(() => loadTheme());
   const [stats, setStats] = useState<ArchiveStats | null>(null);
@@ -611,15 +611,7 @@ export const App: React.FC = () => {
 
         {/* Right utility controls */}
         <div className="flex shrink-0 items-center gap-1.5">
-          <button
-            type="button"
-            onClick={toggleLocale}
-            title={t.switchLangTitle}
-            className="inline-flex items-center gap-1 rounded-md border border-white/15 bg-white/10 px-2 py-1 text-xs font-medium text-white/90 transition hover:bg-white/20"
-          >
-            <Languages className="h-3.5 w-3.5 opacity-85" />
-            <span>{t.langShort}</span>
-          </button>
+          <LanguagePicker />
           <ThemePicker theme={theme} onSelectTheme={setTheme} />
           <a
             href="https://github.com/Yukaii/g0v-slack-viewer"

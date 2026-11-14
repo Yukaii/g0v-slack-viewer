@@ -35,7 +35,8 @@ export const I18nProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const toggleLocale = useCallback(() => {
     setLocaleState((prev) => {
-      const next: Locale = prev === 'zh-TW' ? 'en' : 'zh-TW';
+      const next: Locale =
+        prev === 'zh-TW' ? 'en' : prev === 'en' ? 'ja' : 'zh-TW';
       saveLocale(next);
       return next;
     });
@@ -44,7 +45,8 @@ export const I18nProvider: React.FC<{ children: React.ReactNode }> = ({
   const t = TRANSLATIONS[locale];
 
   useEffect(() => {
-    document.documentElement.lang = locale === 'zh-TW' ? 'zh-Hant-TW' : 'en';
+    document.documentElement.lang =
+      locale === 'zh-TW' ? 'zh-Hant-TW' : locale === 'ja' ? 'ja' : 'en';
     document.title = t.appTitle;
   }, [locale, t.appTitle]);
 

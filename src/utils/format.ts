@@ -13,6 +13,10 @@ export function formatDateDivider(
     const weekday = dt.toLocaleDateString('zh-TW', { weekday: 'long' });
     return `${year}年${month}月${day}日 ${weekday}`;
   }
+  if (locale === 'ja') {
+    const weekday = dt.toLocaleDateString('ja-JP', { weekday: 'short' });
+    return `${year}年${month}月${day}日 (${weekday})`;
+  }
   const weekday = dt.toLocaleDateString('en-US', { weekday: 'long' });
   const monthName = dt.toLocaleDateString('en-US', { month: 'long' });
   return `${weekday}, ${monthName} ${day}, ${year}`;
@@ -39,7 +43,7 @@ export function formatMonthPill(
 ): string {
   const mNum = parseInt(ym.slice(5, 7), 10);
   if (Number.isNaN(mNum) || mNum < 1 || mNum > 12) return ym.slice(5);
-  if (locale === 'zh-TW') return `${mNum}月`;
+  if (locale === 'zh-TW' || locale === 'ja') return `${mNum}月`;
   return EN_MONTHS[mNum - 1];
 }
 

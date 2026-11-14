@@ -1,6 +1,6 @@
 import type { AppThemeId } from './themes';
 
-export type Locale = 'zh-TW' | 'en';
+export type Locale = 'zh-TW' | 'en' | 'ja';
 
 const STARRED_KEY = 'g0v_slack_starred_channels';
 const THEME_KEY = 'g0v_slack_theme';
@@ -18,7 +18,7 @@ const DEFAULT_STARRED = [
 export function loadLocale(): Locale {
   try {
     const raw = localStorage.getItem(LOCALE_KEY);
-    if (raw === 'zh-TW' || raw === 'en') return raw;
+    if (raw === 'zh-TW' || raw === 'en' || raw === 'ja') return raw;
     return 'zh-TW';
   } catch {
     return 'zh-TW';

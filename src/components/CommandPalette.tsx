@@ -18,6 +18,7 @@ import type { ChannelSummary, SearchResultItem } from '../types';
 import { dedupeSearchResults } from '../utils/dedupeMessages';
 import { formatCompactNumber } from '../utils/format';
 import { getCommandShortcutLabel } from '../utils/platform';
+import type { Locale } from '../utils/storage';
 import { APP_THEMES, type AppThemeId } from '../utils/themes';
 import { RichContent } from './RichContent';
 
@@ -57,7 +58,8 @@ type SwitcherItem =
         | 'language'
         | 'info'
         | 'search-mode'
-        | `set-theme:${AppThemeId}`;
+        | `set-theme:${AppThemeId}`
+        | `set-locale:${Locale}`;
       label: string;
       description: string;
       keywords?: string;
@@ -114,7 +116,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   onSelectTheme,
   onToggleChannelInfo,
 }) => {
-  const { locale, t, toggleLocale } = useI18n();
+  const { locale, setLocale, toggleLocale, t } = useI18n();
   const [mode, setMode] = useState<PaletteMode>(initialMode);
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -254,9 +256,11 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
         label:
           locale === 'zh-TW'
             ? `切換佈景主題（目前：${currentThemeName}）`
-            : `Cycle Theme (current: ${currentThemeName})`,
+            : locale === 'ja'
+              ? `テーマを切り替え（現在: ${currentThemeName}）`
+              : `Cycle Theme (current: ${currentThemeName})`,
         description: t.themes.title,
-        keywords: 'theme dark light jothon classic 主題 佈景 暗夜 公民白 揪松',
+        keywords: 'theme dark light jothon classic 主題 佈景 暗夜 公民白 揪松 テーマ',
       },
       ...APP_THEMES.filter((item) => item.id !== theme).map((item) => {
         const localized = t.themes.items[item.id];
@@ -266,7 +270,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
           id: `set-theme:${item.id}` as const,
           label: t.themes.themeLabel(localized.name),
           description: localized.subtitle,
-          keywords: `theme ${item.name} ${item.id} 主題 佈景`,
+          keywords: `theme ${item.name} ${item.id} 主題 佈景 テーマ`,
         };
       }),
       {
@@ -275,8 +279,25 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
         id: 'language',
         label: t.commandPalette.switchLangAction,
         description: t.commandPalette.switchLangSub,
-        keywords: 'language locale i18n english chinese zh-tw 語言 中文 英文',
+        keywords:
+          'language locale i18n english chinese japanese zh-tw ja 語言 中文 正體中文 英文 日本語 にほんご 言語',
       },
+      ...(
+        [
+          { id: 'zh-TW', label: '正體中文', desc: 'Switch to 正體中文 (zh-TW)', kw: 'chinese taiwan zh-tw 正體中文 繁體中文 中文 台灣' },
+          { id: 'en', label: 'English', desc: 'Switch to English (en)', kw: 'english en 英文 英語' },
+          { id: 'ja', label: '日本語', desc: 'Switch to 日本語 (ja)', kw: 'japanese ja 日本語 にほんご 日文 日語' },
+        ] as const
+      )
+        .filter((l) => l.id !== locale)
+        .map((l) => ({
+          kind: 'action' as const,
+          key: `act:locale:${l.id}`,
+          id: `set-locale:${l.id}` as const,
+          label: l.label,
+          description: l.desc,
+          keywords: `language locale ${l.kw}`,
+        })),
     ];
 
     if (viewMode === 'channel') {
@@ -287,12 +308,16 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
         label:
           locale === 'zh-TW'
             ? '開啟／關閉頻道詳情'
-            : 'Toggle Channel Details',
+            : locale === 'ja'
+              ? 'チャンネル詳細を表示／非表示'
+              : 'Toggle Channel Details',
         description:
           locale === 'zh-TW'
             ? '檢視主題、說明、成員數與 RSS 訂閱'
-            : 'View topic, purpose, members, and RSS feed',
-        keywords: 'details info topic rss 詳情 資訊 主題',
+            : locale === 'ja'
+              ? 'トピック、説明、メンバー数、RSS フィードを表示'
+              : 'View topic, purpose, members, and RSS feed',
+        keywords: 'details info topic rss 詳情 資訊 主題 詳細 情報 トピック',
       });
     }
 
@@ -304,7 +329,10 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
             a.description.toLowerCase().includes(qLower) ||
             (a.keywords && a.keywords.toLowerCase().includes(qLower))
         )
-      : actions.filter((a) => !a.id.startsWith('set-theme:'));
+      : actions.filter(
+          (a) =>
+            !a.id.startsWith('set-theme:') && !a.id.startsWith('set-locale:')
+        );
 
     // Put message search action right after channel matches (or first if no channels matched)
     if (q) {
@@ -406,6 +434,10 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       } else if (item.id === 'language') {
         toggleLocale();
         onClose();
+      } else if (item.id.startsWith('set-locale:')) {
+        const nextLocale = item.id.replace('set-locale:', '') as Locale;
+        setLocale(nextLocale);
+        onClose();
       } else if (item.id.startsWith('set-theme:')) {
         const nextTheme = item.id.replace('set-theme:', '') as AppThemeId;
         onSelectTheme?.(nextTheme);
@@ -428,6 +460,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       onOpenDirectory,
       onToggleTheme,
       toggleLocale,
+      setLocale,
       onSelectTheme,
       onToggleChannelInfo,
       query,
@@ -755,7 +788,8 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                       ? Compass
                       : item.id === 'theme' || item.id.startsWith('set-theme:')
                         ? Palette
-                        : item.id === 'language'
+                        : item.id === 'language' ||
+                            item.id.startsWith('set-locale:')
                           ? Languages
                           : item.id === 'info'
                             ? Info

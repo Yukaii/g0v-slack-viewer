@@ -348,7 +348,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             className="inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-1 text-white/80 hover:bg-white/10 hover:text-white"
           >
             <Languages className="h-3.5 w-3.5 shrink-0" />
-            <span>{t.sidebar.langBtn}</span>
+            <span>{t.langShort}</span>
           </button>
         </div>
         <div className="flex shrink-0 items-center gap-1">

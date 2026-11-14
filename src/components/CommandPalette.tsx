@@ -377,9 +377,8 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
         setError(
           err instanceof Error ? err.message : t.commandPalette.searchFailed
         );
-      } finally {
-        setLoading(false);
       }
+      setLoading(false);
     },
     [t.commandPalette.searchFailed]
   );

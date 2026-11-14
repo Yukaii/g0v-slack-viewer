@@ -609,7 +609,7 @@ export const MessageList: React.FC<MessageListProps> = ({
               {group.blocks.map((block, idx) =>
                 block.type === 'joinGroup' ? (
                   <ChannelJoinGroup
-                    key={`join-${group.date}-${block.messages[0]?.ts || idx}-${idx}`}
+                    key={`join-${group.date}-${block.messages[0]?.ts || idx}`}
                     messages={block.messages}
                     channelId={channelId}
                     channelName={channelName}
@@ -618,7 +618,7 @@ export const MessageList: React.FC<MessageListProps> = ({
                   />
                 ) : (
                   <MessageItem
-                    key={`${block.message.ts}-${idx}`}
+                    key={block.message.ts}
                     message={block.message}
                     channelId={channelId}
                     month={block.message.date.slice(0, 7) || loadedMonths[0] || ''}

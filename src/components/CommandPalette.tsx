@@ -5,6 +5,7 @@ import {
   Hash,
   History,
   Info,
+  Languages,
   Loader2,
   Palette,
   Search,
@@ -12,10 +13,12 @@ import {
   X,
 } from 'lucide-react';
 import { searchArchive } from '../api';
+import { useI18n } from '../i18n/I18nContext';
 import type { ChannelSummary, SearchResultItem } from '../types';
+import { dedupeSearchResults } from '../utils/dedupeMessages';
 import { formatCompactNumber } from '../utils/format';
 import { getCommandShortcutLabel } from '../utils/platform';
-import { APP_THEMES, getThemeMeta, type AppThemeId } from '../utils/themes';
+import { APP_THEMES, type AppThemeId } from '../utils/themes';
 import { RichContent } from './RichContent';
 
 export type PaletteMode = 'switcher' | 'search';
@@ -48,9 +51,16 @@ type SwitcherItem =
   | {
       kind: 'action';
       key: string;
-      id: 'directory' | 'theme' | 'info' | 'search-mode' | `set-theme:${AppThemeId}`;
+      id:
+        | 'directory'
+        | 'theme'
+        | 'language'
+        | 'info'
+        | 'search-mode'
+        | `set-theme:${AppThemeId}`;
       label: string;
       description: string;
+      keywords?: string;
       shortcut?: string;
     };
 
@@ -104,6 +114,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   onSelectTheme,
   onToggleChannelInfo,
 }) => {
+  const { locale, t, toggleLocale } = useI18n();
   const [mode, setMode] = useState<PaletteMode>(initialMode);
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -123,11 +134,11 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     if (!open) return;
     setMode(initialMode);
     setSelectedIndex(0);
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       inputRef.current?.focus();
       inputRef.current?.select();
     }, 30);
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, [open, initialMode]);
 
   const starredSet = useMemo(() => new Set(starredIds), [starredIds]);
@@ -215,38 +226,57 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       }
     }
 
+    const currentThemeName = t.themes.items[theme].name;
     const actions: Extract<SwitcherItem, { kind: 'action' }>[] = [
       {
         kind: 'action',
         key: 'act:search',
         id: 'search-mode',
         label: q
-          ? `Search archived messages for “${q}”`
-          : 'Search all archived messages',
-        description: 'Full-text search across public channels',
+          ? t.commandPalette.searchArchiveAction(q)
+          : t.commandPalette.searchArchiveActionEmpty,
+        description: t.commandPalette.searchArchiveSub,
+        keywords: 'search messages 搜尋 訊息',
         shortcut: 'Tab',
       },
       {
         kind: 'action',
         key: 'act:directory',
         id: 'directory',
-        label: `Browse Channel Directory (${channels.length.toLocaleString()})`,
-        description: 'Explore, sort, and filter all archived public channels',
+        label: `${t.commandPalette.openDirectoryAction} (${channels.length.toLocaleString()})`,
+        description: t.commandPalette.openDirectorySub,
+        keywords: 'directory channels browse 目錄 頻道 瀏覽',
       },
       {
         kind: 'action',
         key: 'act:theme',
         id: 'theme',
-        label: `Cycle Theme (current: ${getThemeMeta(theme).name})`,
-        description: 'Switch between g0v Civic, g0v Night, g0v Jothon, and Slack Classic',
+        label:
+          locale === 'zh-TW'
+            ? `切換佈景主題（目前：${currentThemeName}）`
+            : `Cycle Theme (current: ${currentThemeName})`,
+        description: t.themes.title,
+        keywords: 'theme dark light jothon classic 主題 佈景 暗夜 公民白 揪松',
       },
-      ...APP_THEMES.filter((t) => t.id !== theme).map((t) => ({
-        kind: 'action' as const,
-        key: `act:theme:${t.id}`,
-        id: `set-theme:${t.id}` as const,
-        label: `Theme: ${t.name}`,
-        description: t.subtitle,
-      })),
+      ...APP_THEMES.filter((item) => item.id !== theme).map((item) => {
+        const localized = t.themes.items[item.id];
+        return {
+          kind: 'action' as const,
+          key: `act:theme:${item.id}`,
+          id: `set-theme:${item.id}` as const,
+          label: t.themes.themeLabel(localized.name),
+          description: localized.subtitle,
+          keywords: `theme ${item.name} ${item.id} 主題 佈景`,
+        };
+      }),
+      {
+        kind: 'action',
+        key: 'act:language',
+        id: 'language',
+        label: t.commandPalette.switchLangAction,
+        description: t.commandPalette.switchLangSub,
+        keywords: 'language locale i18n english chinese zh-tw 語言 中文 英文',
+      },
     ];
 
     if (viewMode === 'channel') {
@@ -254,8 +284,15 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
         kind: 'action',
         key: 'act:info',
         id: 'info',
-        label: 'Toggle Channel Details',
-        description: 'View topic, purpose, members, and RSS feed',
+        label:
+          locale === 'zh-TW'
+            ? '開啟／關閉頻道詳情'
+            : 'Toggle Channel Details',
+        description:
+          locale === 'zh-TW'
+            ? '檢視主題、說明、成員數與 RSS 訂閱'
+            : 'View topic, purpose, members, and RSS feed',
+        keywords: 'details info topic rss 詳情 資訊 主題',
       });
     }
 
@@ -264,7 +301,8 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
           (a) =>
             a.id === 'search-mode' ||
             a.label.toLowerCase().includes(qLower) ||
-            a.description.toLowerCase().includes(qLower)
+            a.description.toLowerCase().includes(qLower) ||
+            (a.keywords && a.keywords.toLowerCase().includes(qLower))
         )
       : actions.filter((a) => !a.id.startsWith('set-theme:'));
 
@@ -290,26 +328,33 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     recentSet,
     theme,
     viewMode,
+    locale,
+    t,
   ]);
 
-  const runArchiveSearch = useCallback(async (searchText: string) => {
-    const q = searchText.trim();
-    if (!q) return;
-    setMode('search');
-    setLoading(true);
-    setError(null);
-    setChannelFilter('ALL');
-    setSubmittedQuery(q);
-    setSelectedIndex(0);
-    try {
-      const res = await searchArchive(q);
-      setResults(res.results);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Search failed');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const runArchiveSearch = useCallback(
+    async (searchText: string) => {
+      const q = searchText.trim();
+      if (!q) return;
+      setMode('search');
+      setLoading(true);
+      setError(null);
+      setChannelFilter('ALL');
+      setSubmittedQuery(q);
+      setSelectedIndex(0);
+      try {
+        const res = await searchArchive(q);
+        setResults(dedupeSearchResults(res.results));
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : t.commandPalette.searchFailed
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [t.commandPalette.searchFailed]
+  );
 
   const channelFacetCounts = useMemo(() => {
     const map = new Map<string, { name: string; count: number }>();
@@ -358,6 +403,9 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       } else if (item.id === 'theme') {
         onToggleTheme();
         onClose();
+      } else if (item.id === 'language') {
+        toggleLocale();
+        onClose();
       } else if (item.id.startsWith('set-theme:')) {
         const nextTheme = item.id.replace('set-theme:', '') as AppThemeId;
         onSelectTheme?.(nextTheme);
@@ -379,6 +427,8 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       onClose,
       onOpenDirectory,
       onToggleTheme,
+      toggleLocale,
+      onSelectTheme,
       onToggleChannelInfo,
       query,
       runArchiveSearch,
@@ -477,7 +527,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                     : 'text-[var(--slack-text-muted)] hover:text-[var(--slack-text)]'
                 }`}
               >
-                Quick Switcher
+                {t.commandPalette.quickSwitcherTab}
               </button>
               <button
                 type="button"
@@ -495,7 +545,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                     : 'text-[var(--slack-text-muted)] hover:text-[var(--slack-text)]'
                 }`}
               >
-                Search Messages
+                {t.commandPalette.searchMessagesTab}
               </button>
             </div>
 
@@ -503,7 +553,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
               type="button"
               onClick={onClose}
               className="rounded-md p-1 text-[var(--slack-text-muted)] hover:bg-[var(--slack-badge-bg)] hover:text-[var(--slack-text)]"
-              aria-label="Close command palette"
+              aria-label={t.commandPalette.closeHint}
             >
               <X className="h-4 w-4" />
             </button>
@@ -521,8 +571,8 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
               }}
               placeholder={
                 mode === 'switcher'
-                  ? 'Jump to a channel (e.g. #general, cofacts) or run a command...'
-                  : 'Search archived messages (e.g. hackmd, cofacts, 零時政府)...'
+                  ? t.commandPalette.jumpPlaceholder
+                  : t.commandPalette.searchPlaceholder
               }
               className="min-w-0 flex-1 bg-transparent text-sm text-[var(--slack-text)] placeholder:text-[var(--slack-text-muted)] focus:outline-none"
             />
@@ -546,7 +596,9 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                 onClick={() => runArchiveSearch(query)}
                 className="rounded-md bg-[var(--slack-accent)] px-3 py-1 text-xs font-semibold text-white transition hover:opacity-90 disabled:opacity-45"
               >
-                {loading ? 'Searching…' : 'Search'}
+                {loading
+                  ? t.commandPalette.searchingBtn
+                  : t.commandPalette.searchBtn}
               </button>
             )}
           </div>
@@ -567,7 +619,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                   : 'bg-[var(--slack-badge-bg)] text-[var(--slack-text-muted)] hover:text-[var(--slack-text)]'
               }`}
             >
-              All ({results.length})
+              {t.commandPalette.allChannelsFilter(results.length)}
             </button>
             {channelFacetCounts.map(([cid, info]) => (
               <button
@@ -598,13 +650,13 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
             switcherItems.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center text-sm text-[var(--slack-text-muted)]">
                 <Hash className="mb-2 h-8 w-8 opacity-35" />
-                <p>No matching channels found.</p>
+                <p>{t.commandPalette.noChannelsMatch}</p>
               </div>
             ) : (
               <div className="space-y-0.5">
                 {!query.trim() && (
                   <div className="px-2.5 pt-1 pb-1 text-[11px] font-semibold tracking-wide text-[var(--slack-text-muted)] uppercase">
-                    Recent &amp; Suggested Channels
+                    {t.commandPalette.channelsHeading(channels.length)}
                   </div>
                 )}
 
@@ -648,7 +700,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                                       : 'bg-[var(--slack-badge-bg)] text-[var(--slack-text-muted)]'
                                   }`}
                                 >
-                                  Current
+                                  {t.commandPalette.currentBadge}
                                 </span>
                               )}
                             </div>
@@ -668,18 +720,20 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
 
                         <div className="flex shrink-0 items-center gap-2 text-xs">
                           {item.badge === 'Starred' && (
-                            <Star
-                              className={`h-3.5 w-3.5 fill-amber-400 text-amber-400`}
-                            />
+                            <span title={t.commandPalette.starredBadge}>
+                              <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                            </span>
                           )}
                           {item.badge === 'Recent' && (
-                            <History
-                              className={`h-3.5 w-3.5 ${
-                                isSelected
-                                  ? 'text-white/80'
-                                  : 'text-[var(--slack-text-muted)]'
-                              }`}
-                            />
+                            <span title={t.commandPalette.recentBadge}>
+                              <History
+                                className={`h-3.5 w-3.5 ${
+                                  isSelected
+                                    ? 'text-white/80'
+                                    : 'text-[var(--slack-text-muted)]'
+                                }`}
+                              />
+                            </span>
                           )}
                           <span
                             className={`tabular-nums ${
@@ -688,7 +742,8 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                                 : 'text-[var(--slack-text-muted)]'
                             }`}
                           >
-                            {formatCompactNumber(ch.messageCount)} msgs
+                            {formatCompactNumber(ch.messageCount)}{' '}
+                            {t.messageList.msgsShort}
                           </span>
                         </div>
                       </button>
@@ -700,9 +755,11 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                       ? Compass
                       : item.id === 'theme' || item.id.startsWith('set-theme:')
                         ? Palette
-                        : item.id === 'info'
-                          ? Info
-                          : Search;
+                        : item.id === 'language'
+                          ? Languages
+                          : item.id === 'info'
+                            ? Info
+                            : Search;
 
                   return (
                     <button
@@ -768,7 +825,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
           ) : loading ? (
             <div className="flex flex-col items-center justify-center gap-2 py-14 text-sm text-[var(--slack-text-muted)]">
               <Loader2 className="h-6 w-6 animate-spin text-[var(--slack-accent)]" />
-              <span>Searching g0v Slack Archive…</span>
+              <span>{t.commandPalette.searchingStatus}</span>
             </div>
           ) : error ? (
             <div className="py-12 text-center text-sm text-rose-500">
@@ -778,18 +835,13 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
             <div className="flex flex-col items-center justify-center py-12 text-center text-xs text-[var(--slack-text-muted)]">
               <Search className="mb-2 h-8 w-8 opacity-35" />
               <p className="text-sm font-medium text-[var(--slack-text)]">
-                Search archived public messages
+                {t.commandPalette.searchHintTitle}
               </p>
-              <p className="mt-1">
-                Press <kbd className="rounded bg-[var(--slack-badge-bg)] px-1.5 py-0.5">Enter</kbd> to
-                search up to 100 matching messages, or{' '}
-                <kbd className="rounded bg-[var(--slack-badge-bg)] px-1.5 py-0.5">Tab</kbd> to jump
-                to a channel.
-              </p>
+              <p className="mt-1">{t.commandPalette.searchHintSub}</p>
             </div>
           ) : filteredResults.length === 0 ? (
             <div className="py-12 text-center text-sm text-[var(--slack-text-muted)]">
-              No archived messages matched “{submittedQuery}”.
+              {t.commandPalette.noResults(submittedQuery)}
             </div>
           ) : (
             <div className="space-y-1">
@@ -852,29 +904,33 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
               <kbd className="rounded bg-[var(--slack-badge-bg)] px-1.5 py-0.5 font-medium text-[var(--slack-text)]">
                 ↑↓
               </kbd>{' '}
-              Navigate
+              {t.commandPalette.navigateHint}
             </span>
             <span>
               <kbd className="rounded bg-[var(--slack-badge-bg)] px-1.5 py-0.5 font-medium text-[var(--slack-text)]">
                 ↵
               </kbd>{' '}
-              {mode === 'switcher' ? 'Open' : 'Search / Jump'}
+              {mode === 'switcher'
+                ? t.commandPalette.openHint
+                : t.commandPalette.searchJumpHint}
             </span>
             <span>
               <kbd className="rounded bg-[var(--slack-badge-bg)] px-1.5 py-0.5 font-medium text-[var(--slack-text)]">
                 Tab
               </kbd>{' '}
-              {mode === 'switcher' ? 'Search messages' : 'Quick switcher'}
+              {mode === 'switcher'
+                ? t.commandPalette.searchMessagesTab
+                : t.commandPalette.quickSwitcherTab}
             </span>
             <span>
               <kbd className="rounded bg-[var(--slack-badge-bg)] px-1.5 py-0.5 font-medium text-[var(--slack-text)]">
                 Esc
               </kbd>{' '}
-              Close
+              {t.commandPalette.closeHint}
             </span>
           </div>
           <span className="hidden sm:inline">
-            Shortcut:{' '}
+            {t.commandPalette.shortcutHint}
             <kbd className="rounded bg-[var(--slack-badge-bg)] px-1.5 py-0.5 font-medium text-[var(--slack-text)]">
               {shortcutLabel}
             </kbd>

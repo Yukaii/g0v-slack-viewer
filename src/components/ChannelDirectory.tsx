@@ -9,6 +9,7 @@ import {
   Users,
   X,
 } from 'lucide-react';
+import { useI18n } from '../i18n/I18nContext';
 import type { ArchiveStats, ChannelSummary } from '../types';
 import { formatCompactNumber } from '../utils/format';
 import { RichContent } from './RichContent';
@@ -32,6 +33,7 @@ export const ChannelDirectory: React.FC<ChannelDirectoryProps> = ({
   onToggleStar,
   onOpenMobileSidebar,
 }) => {
+  const { t } = useI18n();
   const [query, setQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortKey>('members');
 
@@ -69,19 +71,22 @@ export const ChannelDirectory: React.FC<ChannelDirectoryProps> = ({
               type="button"
               onClick={onOpenMobileSidebar}
               className="rounded-md p-1.5 text-[var(--slack-text-muted)] hover:bg-[var(--slack-badge-bg)] lg:hidden"
-              aria-label="Open sidebar"
+              aria-label={t.channelHeader.openSidebar}
             >
               <Menu className="h-5 w-5" />
             </button>
             <div>
               <h1 className="text-base font-extrabold text-[var(--slack-text)] sm:text-lg">
-                Channel Directory
+                {t.channelDirectory.title}
               </h1>
               <p className="text-xs text-[var(--slack-text-muted)]">
-                {channels.length.toLocaleString()} public channels
                 {stats
-                  ? ` · ${stats.messages.toLocaleString()} archived messages · ${stats.users.toLocaleString()} users`
-                  : ''}
+                  ? t.channelDirectory.summary(
+                      channels.length.toLocaleString(),
+                      stats.messages.toLocaleString(),
+                      stats.users.toLocaleString()
+                    )
+                  : t.sidebar.browseAll(channels.length)}
               </p>
             </div>
           </div>
@@ -93,7 +98,7 @@ export const ChannelDirectory: React.FC<ChannelDirectoryProps> = ({
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search channels, topics..."
+                placeholder={t.channelDirectory.searchPlaceholder}
                 className="w-full rounded-lg border border-[var(--slack-border)] bg-[var(--slack-surface-bg)] py-1.5 pr-8 pl-8 text-sm text-[var(--slack-text)] placeholder:text-[var(--slack-text-muted)] focus:border-[var(--slack-accent)] focus:outline-none sm:w-72"
               />
               {query && (
@@ -114,10 +119,10 @@ export const ChannelDirectory: React.FC<ChannelDirectoryProps> = ({
                 onChange={(e) => setSortBy(e.target.value as SortKey)}
                 className="bg-transparent font-medium text-[var(--slack-text)] focus:outline-none"
               >
-                <option value="members">Most Members</option>
-                <option value="messages">Most Messages</option>
-                <option value="recent">Recently Active</option>
-                <option value="name">Name (A–Z)</option>
+                <option value="members">{t.channelDirectory.sortMembers}</option>
+                <option value="messages">{t.channelDirectory.sortMessages}</option>
+                <option value="recent">{t.channelDirectory.sortRecent}</option>
+                <option value="name">{t.channelDirectory.sortName}</option>
               </select>
             </div>
           </div>
@@ -142,7 +147,7 @@ export const ChannelDirectory: React.FC<ChannelDirectoryProps> = ({
                   </span>
                   {ch.isArchived && (
                     <span className="rounded bg-[var(--slack-badge-bg)] px-1.5 py-0.5 text-[10px] font-semibold uppercase text-[var(--slack-text-muted)]">
-                      Archived
+                      {t.channelDirectory.archived}
                     </span>
                   )}
                   <span className="inline-flex items-center gap-1 text-xs text-[var(--slack-text-muted)]">
@@ -155,7 +160,7 @@ export const ChannelDirectory: React.FC<ChannelDirectoryProps> = ({
                   </span>
                   {ch.lastPostedLabel && (
                     <span className="hidden text-xs text-[var(--slack-text-muted)] sm:inline">
-                      · Last post {ch.lastPostedLabel.split(' ')[0]}
+                      · {t.channelDirectory.lastPost(ch.lastPostedLabel.split(' ')[0])}
                     </span>
                   )}
                 </div>
@@ -180,7 +185,11 @@ export const ChannelDirectory: React.FC<ChannelDirectoryProps> = ({
                   e.stopPropagation();
                   onToggleStar(ch.id);
                 }}
-                title={isStarred ? 'Unstar channel' : 'Star channel'}
+                title={
+                  isStarred
+                    ? t.channelHeader.unstarChannel
+                    : t.channelHeader.starChannel
+                }
                 className="shrink-0 rounded-md border border-[var(--slack-border)] p-1.5 text-[var(--slack-text-muted)] hover:bg-[var(--slack-main-bg)]"
               >
                 <Star
@@ -195,7 +204,7 @@ export const ChannelDirectory: React.FC<ChannelDirectoryProps> = ({
 
         {filtered.length === 0 && (
           <div className="px-6 py-16 text-center text-sm text-[var(--slack-text-muted)]">
-            No channels matched "{query}".
+            {t.channelDirectory.noMatches(query)}
           </div>
         )}
       </div>

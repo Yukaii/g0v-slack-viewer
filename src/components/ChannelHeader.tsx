@@ -11,8 +11,9 @@ import {
   Star,
   Users,
 } from 'lucide-react';
+import { useI18n } from '../i18n/I18nContext';
 import type { ChannelDetailResponse, ChannelSummary } from '../types';
-import { formatCompactNumber } from '../utils/format';
+import { formatCompactNumber, formatMonthPill } from '../utils/format';
 import { RichContent } from './RichContent';
 
 interface ChannelHeaderProps {
@@ -44,6 +45,7 @@ export const ChannelHeader: React.FC<ChannelHeaderProps> = ({
   onOpenSwitcher,
   onNavigateChannel,
 }) => {
+  const { locale, t } = useI18n();
   const [mobileTimelineOpen, setMobileTimelineOpen] = useState(false);
   const activeYear = detail?.activeMonth?.slice(0, 4) || '';
   const activeYearEntry = useMemo(
@@ -66,7 +68,7 @@ export const ChannelHeader: React.FC<ChannelHeaderProps> = ({
             type="button"
             onClick={onOpenMobileSidebar}
             className="rounded-md p-1.5 text-[var(--slack-text-muted)] hover:bg-[var(--slack-badge-bg)] lg:hidden"
-            aria-label="Open sidebar"
+            aria-label={t.channelHeader.openSidebar}
           >
             <Menu className="h-5 w-5" />
           </button>
@@ -79,7 +81,11 @@ export const ChannelHeader: React.FC<ChannelHeaderProps> = ({
             <button
               type="button"
               onClick={onToggleStar}
-              title={isStarred ? 'Unstar channel' : 'Star channel'}
+              title={
+                isStarred
+                  ? t.channelHeader.unstarChannel
+                  : t.channelHeader.starChannel
+              }
               className="rounded p-1 text-[var(--slack-text-muted)] hover:bg-[var(--slack-badge-bg)]"
             >
               <Star
@@ -109,9 +115,9 @@ export const ChannelHeader: React.FC<ChannelHeaderProps> = ({
           <button
             type="button"
             onClick={onOpenSwitcher}
-            title="Jump to channel or search"
+            title={t.channelHeader.jumpOrSearch}
             className="inline-flex items-center justify-center rounded-md border border-[var(--slack-border)] p-1.5 text-[var(--slack-text-muted)] hover:bg-[var(--slack-badge-bg)] hover:text-[var(--slack-text)] sm:hidden"
-            aria-label="Jump to channel or search"
+            aria-label={t.channelHeader.jumpOrSearch}
           >
             <Search className="h-3.5 w-3.5" />
           </button>
@@ -124,7 +130,7 @@ export const ChannelHeader: React.FC<ChannelHeaderProps> = ({
           <button
             type="button"
             onClick={onToggleInfo}
-            title="Channel details"
+            title={t.channelHeader.channelDetails}
             className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium transition sm:px-2.5 ${
               showInfo
                 ? 'border-[var(--slack-accent)] bg-[var(--slack-accent)]/10 text-[var(--slack-link)]'
@@ -132,7 +138,7 @@ export const ChannelHeader: React.FC<ChannelHeaderProps> = ({
             }`}
           >
             <Info className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Details</span>
+            <span className="hidden sm:inline">{t.channelHeader.detailsShort}</span>
           </button>
         </div>
       </div>
@@ -165,7 +171,7 @@ export const ChannelHeader: React.FC<ChannelHeaderProps> = ({
               onClick={() =>
                 detail.previousMonth && onSelectMonth(detail.previousMonth)
               }
-              aria-label="Previous month"
+              aria-label={t.channelHeader.previousMonth}
               className="inline-flex items-center rounded border border-[var(--slack-border)] bg-[var(--slack-main-bg)] p-1 text-xs text-[var(--slack-text-muted)] disabled:opacity-35"
             >
               <ChevronLeft className="h-3.5 w-3.5" />
@@ -174,7 +180,7 @@ export const ChannelHeader: React.FC<ChannelHeaderProps> = ({
               type="button"
               disabled={!detail.nextMonth || loading}
               onClick={() => detail.nextMonth && onSelectMonth(detail.nextMonth)}
-              aria-label="Next month"
+              aria-label={t.channelHeader.nextMonth}
               className="inline-flex items-center rounded border border-[var(--slack-border)] bg-[var(--slack-main-bg)] p-1 text-xs text-[var(--slack-text-muted)] disabled:opacity-35"
             >
               <ChevronRight className="h-3.5 w-3.5" />
@@ -186,7 +192,7 @@ export const ChannelHeader: React.FC<ChannelHeaderProps> = ({
                 onClick={() => onSelectMonth(latestMonth)}
                 className="rounded border border-[var(--slack-border)] bg-[var(--slack-main-bg)] px-2 py-0.5 text-[11px] font-medium text-[var(--slack-link)]"
               >
-                Latest
+                {t.channelHeader.latest}
               </button>
             )}
           </div>
@@ -230,8 +236,8 @@ export const ChannelHeader: React.FC<ChannelHeaderProps> = ({
                 }
                 title={
                   detail.previousMonth
-                    ? `Previous: ${detail.previousMonth}`
-                    : 'Oldest month'
+                    ? `${t.channelHeader.previousMonth}: ${detail.previousMonth}`
+                    : t.channelHeader.oldestMonth
                 }
                 className="inline-flex items-center rounded border border-[var(--slack-border)] bg-[var(--slack-main-bg)] p-1 text-xs text-[var(--slack-text-muted)] hover:text-[var(--slack-text)] disabled:opacity-35"
               >
@@ -243,8 +249,8 @@ export const ChannelHeader: React.FC<ChannelHeaderProps> = ({
                 onClick={() => detail.nextMonth && onSelectMonth(detail.nextMonth)}
                 title={
                   detail.nextMonth
-                    ? `Next: ${detail.nextMonth}`
-                    : 'Latest month'
+                    ? `${t.channelHeader.nextMonth}: ${detail.nextMonth}`
+                    : t.channelHeader.latestMonth
                 }
                 className="inline-flex items-center rounded border border-[var(--slack-border)] bg-[var(--slack-main-bg)] p-1 text-xs text-[var(--slack-text-muted)] hover:text-[var(--slack-text)] disabled:opacity-35"
               >
@@ -257,7 +263,7 @@ export const ChannelHeader: React.FC<ChannelHeaderProps> = ({
                   onClick={() => onSelectMonth(latestMonth)}
                   className="ml-1 rounded border border-[var(--slack-border)] bg-[var(--slack-main-bg)] px-2 py-0.5 text-[11px] font-medium text-[var(--slack-link)] hover:bg-[var(--slack-badge-bg)]"
                 >
-                  Latest
+                  {t.channelHeader.latest}
                 </button>
               )}
             </div>
@@ -280,7 +286,9 @@ export const ChannelHeader: React.FC<ChannelHeaderProps> = ({
                         : 'border-transparent bg-[var(--slack-main-bg)] text-[var(--slack-text-muted)] hover:border-[var(--slack-border)] hover:text-[var(--slack-text)]'
                     }`}
                   >
-                    <span className="font-mono-code">{m.month.slice(5)}月</span>
+                    <span className="font-mono-code">
+                      {formatMonthPill(m.month, locale)}
+                    </span>
                     <span className="rounded-full bg-[var(--slack-badge-bg)] px-1.5 text-[10px] text-[var(--slack-text-muted)]">
                       {m.count}
                     </span>

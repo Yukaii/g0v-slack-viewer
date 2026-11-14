@@ -1,8 +1,11 @@
 import type { AppThemeId } from './themes';
 
+export type Locale = 'zh-TW' | 'en';
+
 const STARRED_KEY = 'g0v_slack_starred_channels';
 const THEME_KEY = 'g0v_slack_theme';
 const RECENT_KEY = 'g0v_slack_recent_channels';
+const LOCALE_KEY = 'g0v_slack_locale';
 
 const DEFAULT_STARRED = [
   'C02G2SXKX', // #general
@@ -11,6 +14,24 @@ const DEFAULT_STARRED = [
   'C0385B90D', // #jothon
   'C2PPMRQGP', // #cofacts
 ];
+
+export function loadLocale(): Locale {
+  try {
+    const raw = localStorage.getItem(LOCALE_KEY);
+    if (raw === 'zh-TW' || raw === 'en') return raw;
+    return 'zh-TW';
+  } catch {
+    return 'zh-TW';
+  }
+}
+
+export function saveLocale(locale: Locale): void {
+  try {
+    localStorage.setItem(LOCALE_KEY, locale);
+  } catch {
+    // ignore
+  }
+}
 
 export function loadStarredChannels(): string[] {
   try {

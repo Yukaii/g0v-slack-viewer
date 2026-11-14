@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   AlertCircle,
   ExternalLink,
+  Languages,
   Loader2,
   RefreshCw,
   Search,
@@ -22,6 +23,11 @@ import {
   saveStarredChannels,
   saveTheme,
 } from './utils/storage';
+import {
+  dedupeAndMergeMessages,
+  messageOrReplyMatchesTs,
+} from './utils/dedupeMessages';
+import { useI18n } from './i18n/I18nContext';
 import { Sidebar } from './components/Sidebar';
 import { ChannelHeader } from './components/ChannelHeader';
 import { MessageList } from './components/MessageList';
@@ -75,15 +81,7 @@ function mergeMessages(
   existing: ArchiveMessage[],
   incoming: ArchiveMessage[]
 ): ArchiveMessage[] {
-  const map = new Map<string, ArchiveMessage>();
-  for (const m of existing) map.set(m.ts, m);
-  for (const m of incoming) {
-    const prev = map.get(m.ts);
-    if (!prev || m.replies.length >= prev.replies.length) {
-      map.set(m.ts, m);
-    }
-  }
-  return Array.from(map.values()).sort((a, b) => Number(a.ts) - Number(b.ts));
+  return dedupeAndMergeMessages(existing, incoming);
 }
 
 const MAX_CACHED_CHANNELS = 30;
@@ -127,6 +125,7 @@ function getInitialRoute(): AppRouteState {
 
 export const App: React.FC = () => {
   const initialRoute = useMemo(() => getInitialRoute(), []);
+  const { t, toggleLocale } = useI18n();
 
   const [theme, setTheme] = useState<AppThemeId>(() => loadTheme());
   const [stats, setStats] = useState<ArchiveStats | null>(null);
@@ -281,9 +280,7 @@ export const App: React.FC = () => {
         Boolean(cached) &&
         (!month || cached!.loadedMonths.includes(month)) &&
         (!ts ||
-          cached!.loadedMessages.some(
-            (m) => m.ts === ts || m.replies.some((r) => r.ts === ts)
-          ));
+          cached!.loadedMessages.some((m) => messageOrReplyMatchesTs(m, ts)));
 
       if (canRestoreCached && cached) {
         // Touch LRU entry without discarding loaded messages or scroll state
@@ -324,6 +321,7 @@ export const App: React.FC = () => {
       try {
         const data = await fetchChannelMessages(channelId, month);
         if (sessionRef.current !== mySession) return;
+        const dedupedMessages = dedupeAndMergeMessages(data.messages);
         const nextRestore: MessageListRestoreState = {
           scrollTop: null,
           sortOrder: cached?.sortOrder ?? 'asc',
@@ -333,7 +331,7 @@ export const App: React.FC = () => {
         const newEntry: CachedChannelState = {
           detail: data,
           loadedMonths: [data.activeMonth],
-          loadedMessages: data.messages,
+          loadedMessages: dedupedMessages,
           prevMonthToLoad: data.previousMonth,
           nextMonthToLoad: data.nextMonth,
           lastHighlightTs: ts,
@@ -351,7 +349,7 @@ export const App: React.FC = () => {
       } catch (err) {
         if (sessionRef.current !== mySession) return;
         setChannelError(
-          err instanceof Error ? err.message : 'Failed to load channel'
+          err instanceof Error ? err.message : t.app.failedLoadChannel
         );
       } finally {
         if (sessionRef.current === mySession) {
@@ -359,7 +357,7 @@ export const App: React.FC = () => {
         }
       }
     },
-    [setCacheEntry]
+    [setCacheEntry, t.app.failedLoadChannel]
   );
 
   // Fetch or restore channel messages on route changes in channel mode
@@ -588,7 +586,7 @@ export const App: React.FC = () => {
         <div className="hidden w-56 shrink-0 items-center gap-2 text-xs text-white/75 md:flex">
           <G0vLogo variant="wordmark" size="sm" />
           <span className="whitespace-nowrap font-semibold tracking-tight text-white">
-            Slack Archive
+            {t.topBar.subtitle}
           </span>
           <span className="shrink-0 rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-medium text-white/75">
             零時政府
@@ -603,8 +601,8 @@ export const App: React.FC = () => {
         >
           <span className="flex items-center gap-2 truncate">
             <Search className="h-3.5 w-3.5 shrink-0" />
-            <span className="truncate sm:hidden">Jump or search…</span>
-            <span className="hidden truncate sm:inline">Jump to channel or search g0v.tw...</span>
+            <span className="truncate sm:hidden">{t.topBar.jumpOrSearchShort}</span>
+            <span className="hidden truncate sm:inline">{t.topBar.jumpOrSearchLong}</span>
           </span>
           <kbd className="hidden rounded bg-black/25 px-1.5 py-0.5 text-[10px] font-medium text-white/80 sm:inline">
             {shortcutLabel}
@@ -613,12 +611,21 @@ export const App: React.FC = () => {
 
         {/* Right utility controls */}
         <div className="flex shrink-0 items-center gap-1.5">
+          <button
+            type="button"
+            onClick={toggleLocale}
+            title={t.switchLangTitle}
+            className="inline-flex items-center gap-1 rounded-md border border-white/15 bg-white/10 px-2 py-1 text-xs font-medium text-white/90 transition hover:bg-white/20"
+          >
+            <Languages className="h-3.5 w-3.5 opacity-85" />
+            <span>{t.langShort}</span>
+          </button>
           <ThemePicker theme={theme} onSelectTheme={setTheme} />
           <a
             href="https://github.com/Yukaii/g0v-slack-viewer"
             target="_blank"
             rel="noopener noreferrer"
-            title="GitHub Repository (Yukaii/g0v-slack-viewer)"
+            title={t.topBar.githubTitle}
             className="hidden items-center gap-1.5 rounded-md px-2 py-1 text-xs text-white/80 hover:bg-white/15 hover:text-white sm:inline-flex"
           >
             <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 fill-current" aria-hidden="true">
@@ -630,10 +637,10 @@ export const App: React.FC = () => {
             href="https://g0v-slack-archive.g0v.ronny.tw/"
             target="_blank"
             rel="noopener noreferrer"
-            title="Upstream data archive (g0v-slack-archive)"
+            title={t.topBar.archiveLinkTitle}
             className="hidden items-center gap-1 rounded-md px-2 py-1 text-xs text-white/75 hover:bg-white/15 hover:text-white sm:inline-flex"
           >
-            <span>Archive</span>
+            <span>{t.topBar.archiveLink}</span>
             <ExternalLink className="h-3 w-3" />
           </a>
         </div>
@@ -689,7 +696,7 @@ export const App: React.FC = () => {
               {channelLoading && !activeDetail ? (
                 <div className="flex flex-1 flex-col items-center justify-center gap-3 text-sm text-[var(--slack-text-muted)]">
                   <Loader2 className="h-7 w-7 animate-spin text-[var(--slack-accent)]" />
-                  <span>Loading archived messages...</span>
+                  <span>{t.app.loadingMessages}</span>
                 </div>
               ) : channelError && !activeDetail ? (
                 <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
@@ -708,7 +715,7 @@ export const App: React.FC = () => {
                     className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--slack-accent)] px-3.5 py-1.5 text-xs font-semibold text-white hover:opacity-90"
                   >
                     <RefreshCw className="h-3.5 w-3.5" />
-                    Retry
+                    {t.app.retry}
                   </button>
                 </div>
               ) : activeDetail ? (
@@ -716,13 +723,14 @@ export const App: React.FC = () => {
                   {channelLoading && (
                     <div className="absolute top-12 right-5 z-20 inline-flex items-center gap-1.5 rounded-full border border-[var(--slack-border)] bg-[var(--slack-main-bg)] px-3 py-1 text-xs shadow-md">
                       <Loader2 className="h-3.5 w-3.5 animate-spin text-[var(--slack-accent)]" />
-                      <span>Loading...</span>
+                      <span>{t.app.loading}</span>
                     </div>
                   )}
                   <MessageList
                     key={sessionKey}
                     sessionKey={sessionKey}
                     channelId={activeDetail.channelId}
+                    channelName={activeDetail.channelName || activeChannelSummary?.name || ''}
                     loadedMonths={loadedMonths}
                     isLatestLoaded={!nextMonthToLoad}
                     prevMonth={prevMonthToLoad}

@@ -566,6 +566,11 @@ function parseMessageElement(
 
       replies.push({
         ts: rTs,
+        rawTs: rRawMsg?.ts ? String(rRawMsg.ts) : undefined,
+        clientMsgId: rRawMsg?.client_msg_id
+          ? String(rRawMsg.client_msg_id)
+          : undefined,
+        eventTs: rRawMsg?.event_ts ? String(rRawMsg.event_ts) : undefined,
         timeLabel: rTimeSpan.text().trim(),
         user: rUser,
         contentsHtml: (rBody.children('.contents').html() || '').trim(),
@@ -578,6 +583,11 @@ function parseMessageElement(
 
   return {
     ts,
+    rawTs: rawMsgJson?.ts ? String(rawMsgJson.ts) : undefined,
+    clientMsgId: rawMsgJson?.client_msg_id
+      ? String(rawMsgJson.client_msg_id)
+      : undefined,
+    eventTs: rawMsgJson?.event_ts ? String(rawMsgJson.event_ts) : undefined,
     date: dateStr,
     timeLabel,
     user,

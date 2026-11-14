@@ -8,6 +8,7 @@ import {
   Link2,
   MessageSquare,
 } from 'lucide-react';
+import { useI18n } from '../i18n/I18nContext';
 import type { ArchiveMessage, MessageFile } from '../types';
 import { formatFileSize, formatShortTime } from '../utils/format';
 import { RichContent } from './RichContent';
@@ -35,6 +36,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
   onNavigateChannel,
   onPreviewFile,
 }) => {
+  const { t } = useI18n();
   const [copied, setCopied] = useState(false);
 
   const handleCopyLink = () => {
@@ -69,6 +71,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
     <div
       id={`ts-${message.ts}`}
       data-ts={message.ts}
+      data-alias-ts={message.aliasTs?.join(' ') || undefined}
       className={`group relative flex gap-2.5 px-3 py-1.5 transition-colors sm:gap-3 sm:px-5 hover:bg-[var(--slack-surface-hover)] ${
         isHighlighted ? 'message-flash' : ''
       } ${
@@ -83,19 +86,21 @@ export const MessageItem: React.FC<MessageItemProps> = ({
           <button
             type="button"
             onClick={() => onOpenThread(message)}
-            title="View thread"
+            title={t.messageItem.viewThread}
             className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-[var(--slack-text-muted)] hover:bg-[var(--slack-badge-bg)] hover:text-[var(--slack-text)]"
           >
             <MessageSquare className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">
-              {message.replies.length > 0 ? 'Thread' : 'Inspect'}
+              {message.replies.length > 0
+                ? t.messageItem.thread
+                : t.messageItem.inspect}
             </span>
           </button>
         )}
         <button
           type="button"
           onClick={handleCopyLink}
-          title="Copy permalink"
+          title={t.messageItem.copyPermalink}
           className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-[var(--slack-text-muted)] hover:bg-[var(--slack-badge-bg)] hover:text-[var(--slack-text)]"
         >
           {copied ? (
@@ -108,7 +113,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
           href={upstreamUrl}
           target="_blank"
           rel="noopener noreferrer"
-          title="View on g0v-slack-archive"
+          title={t.messageItem.viewUpstream}
           className="inline-flex items-center rounded-md px-2 py-1 text-xs text-[var(--slack-text-muted)] hover:bg-[var(--slack-badge-bg)] hover:text-[var(--slack-text)]"
         >
           <ExternalLink className="h-3.5 w-3.5" />
@@ -164,12 +169,12 @@ export const MessageItem: React.FC<MessageItemProps> = ({
             </a>
             {message.edited && (
               <span className="text-[11px] text-[var(--slack-text-muted)]">
-                (edited)
+                {t.messageItem.edited}
               </span>
             )}
             {message.isThreadReply && !message.isThreadBroadcast && (
               <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400">
-                thread reply
+                {t.messageItem.threadReplyBadge}
               </span>
             )}
           </div>
@@ -179,7 +184,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
         {message.threadRoot && (
           <div className="mb-1 flex items-center gap-1.5 text-xs text-[var(--slack-text-muted)]">
             <CornerDownRight className="h-3.5 w-3.5" />
-            <span>Replied to a thread:</span>
+            <span>{t.messageItem.repliedToThread}</span>
             <button
               type="button"
               onClick={() =>
@@ -291,10 +296,10 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                         }
                         className="font-medium text-[var(--slack-link)] hover:underline"
                       >
-                        Posted in #{att.channelName}
+                        {t.messageItem.postedIn(att.channelName)}
                       </button>
                     ) : (
-                      <span>Forwarded message</span>
+                      <span>{t.messageItem.forwardedMessage}</span>
                     )}
                     {att.ts && (
                       <span>
@@ -405,12 +410,11 @@ export const MessageItem: React.FC<MessageItemProps> = ({
               ))}
             </div>
             <span className="text-xs font-semibold text-[var(--slack-link)] group-hover/thread:underline">
-              {message.replies.length}{' '}
-              {message.replies.length === 1 ? 'reply' : 'replies'}
+              {t.messageItem.replyCount(message.replies.length)}
             </span>
             {lastReply && (
               <span className="hidden truncate text-xs text-[var(--slack-text-muted)] sm:inline">
-                Last reply {lastReply.timeLabel}
+                {t.messageItem.lastReply(lastReply.timeLabel)}
               </span>
             )}
             <ChevronRight className="h-3.5 w-3.5 text-[var(--slack-text-muted)] opacity-0 transition-opacity group-hover/thread:opacity-100" />

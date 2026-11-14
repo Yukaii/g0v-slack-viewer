@@ -1,12 +1,46 @@
-export function formatDateDivider(dateStr: string): string {
+import type { Locale } from './storage';
+
+export function formatDateDivider(
+  dateStr: string,
+  locale: Locale = 'zh-TW'
+): string {
   // dateStr is YYYY-MM-DD
   const parts = dateStr.split('-').map(Number);
   if (parts.length !== 3 || parts.some(Number.isNaN)) return dateStr;
   const [year, month, day] = parts;
   const dt = new Date(year, month - 1, day);
+  if (locale === 'zh-TW') {
+    const weekday = dt.toLocaleDateString('zh-TW', { weekday: 'long' });
+    return `${year}年${month}月${day}日 ${weekday}`;
+  }
   const weekday = dt.toLocaleDateString('en-US', { weekday: 'long' });
   const monthName = dt.toLocaleDateString('en-US', { month: 'long' });
   return `${weekday}, ${monthName} ${day}, ${year}`;
+}
+
+const EN_MONTHS = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
+
+export function formatMonthPill(
+  ym: string,
+  locale: Locale = 'zh-TW'
+): string {
+  const mNum = parseInt(ym.slice(5, 7), 10);
+  if (Number.isNaN(mNum) || mNum < 1 || mNum > 12) return ym.slice(5);
+  if (locale === 'zh-TW') return `${mNum}月`;
+  return EN_MONTHS[mNum - 1];
 }
 
 export function formatShortTime(timeLabel: string): string {

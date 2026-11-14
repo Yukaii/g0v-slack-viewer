@@ -16,13 +16,20 @@ import {
   Search,
   X,
 } from 'lucide-react';
+import { useI18n } from '../i18n/I18nContext';
 import type { ArchiveMessage, MessageFile } from '../types';
+import {
+  messageMatchesTs,
+  resolveCanonicalMessageTs,
+} from '../utils/dedupeMessages';
 import { formatDateDivider } from '../utils/format';
+import { ChannelJoinGroup, isPlainChannelJoin } from './ChannelJoinGroup';
 import { MessageItem } from './MessageItem';
 
 interface MessageListProps {
   sessionKey: string;
   channelId: string;
+  channelName?: string;
   loadedMonths: string[];
   isLatestLoaded: boolean;
   prevMonth: string | null;
@@ -53,6 +60,10 @@ interface MessageListProps {
   ) => void;
 }
 
+type DateGroupBlock =
+  | { type: 'message'; message: ArchiveMessage; compact: boolean }
+  | { type: 'joinGroup'; messages: ArchiveMessage[] };
+
 function shouldGroupWithPrevious(
   prev: ArchiveMessage | undefined,
   curr: ArchiveMessage
@@ -60,6 +71,7 @@ function shouldGroupWithPrevious(
   if (!prev) return false;
   if (prev.date !== curr.date) return false;
   if (prev.isThreadBroadcast || curr.isThreadBroadcast) return false;
+  if (isPlainChannelJoin(prev) || isPlainChannelJoin(curr)) return false;
   const prevUser = prev.user.id || prev.user.displayName;
   const currUser = curr.user.id || curr.user.displayName;
   if (prevUser !== currUser) return false;
@@ -70,6 +82,7 @@ function shouldGroupWithPrevious(
 export const MessageList: React.FC<MessageListProps> = ({
   sessionKey,
   channelId,
+  channelName,
   loadedMonths,
   isLatestLoaded,
   prevMonth,
@@ -92,6 +105,7 @@ export const MessageList: React.FC<MessageListProps> = ({
   onScrollTopChange,
   onViewPrefsChange,
 }) => {
+  const { locale, t } = useI18n();
   const [localFilter, setLocalFilter] = useState(initialLocalFilter);
   const [showHiddenReplies, setShowHiddenReplies] = useState(
     initialShowHiddenReplies
@@ -123,10 +137,16 @@ export const MessageList: React.FC<MessageListProps> = ({
     [messages]
   );
 
+  // Resolve any 4-decimal or 6-decimal highlightTs to the canonical deduplicated message ts
+  const resolvedHighlightTs = useMemo(
+    () => resolveCanonicalMessageTs(messages, highlightTs),
+    [messages, highlightTs]
+  );
+
   // If the highlighted ts is a hidden thread reply, reveal hidden replies automatically
   useEffect(() => {
     if (!highlightTs) return;
-    const match = messages.find((m) => m.ts === highlightTs);
+    const match = messages.find((m) => messageMatchesTs(m, highlightTs));
     if (match && match.isThreadReply && !match.isThreadBroadcast) {
       setShowHiddenReplies(true);
     }
@@ -154,19 +174,39 @@ export const MessageList: React.FC<MessageListProps> = ({
     );
   }, [messages, showHiddenReplies, localFilter, sortOrder]);
 
-  // Group by date
+  // Group by date, collapsing consecutive plain channel_join messages into join groups
   const dateGroups = useMemo(() => {
-    const groups: Array<{ date: string; items: ArchiveMessage[] }> = [];
+    const groups: Array<{ date: string; blocks: DateGroupBlock[] }> = [];
     for (const msg of visibleMessages) {
-      const last = groups[groups.length - 1];
-      if (!last || last.date !== msg.date) {
-        groups.push({ date: msg.date, items: [msg] });
+      let group = groups[groups.length - 1];
+      if (!group || group.date !== msg.date) {
+        group = { date: msg.date, blocks: [] };
+        groups.push(group);
+      }
+
+      if (isPlainChannelJoin(msg)) {
+        const lastBlock = group.blocks[group.blocks.length - 1];
+        if (lastBlock && lastBlock.type === 'joinGroup') {
+          lastBlock.messages.push(msg);
+        } else {
+          group.blocks.push({ type: 'joinGroup', messages: [msg] });
+        }
       } else {
-        last.items.push(msg);
+        const prevBlock = group.blocks[group.blocks.length - 1];
+        const prevMsg =
+          prevBlock && prevBlock.type === 'message'
+            ? prevBlock.message
+            : undefined;
+        group.blocks.push({
+          type: 'message',
+          message: msg,
+          compact:
+            sortOrder === 'asc' && shouldGroupWithPrevious(prevMsg, msg),
+        });
       }
     }
     return groups;
-  }, [visibleMessages]);
+  }, [visibleMessages, sortOrder]);
 
   // Maintain scroll position when messages are prepended at the top
   useLayoutEffect(() => {
@@ -192,13 +232,13 @@ export const MessageList: React.FC<MessageListProps> = ({
     let timerA: ReturnType<typeof setTimeout> | undefined;
     let timerB: ReturnType<typeof setTimeout> | undefined;
 
-    if (highlightTs && highlightRequestKey > 0) {
+    if (resolvedHighlightTs && highlightRequestKey > 0) {
       if (initialScrollTop !== null && initialScrollTop !== undefined) {
         el.scrollTop = initialScrollTop;
       }
       timerA = setTimeout(() => {
         const target = el.querySelector(
-          `[data-ts="${CSS.escape(highlightTs)}"]`
+          `[data-ts="${CSS.escape(resolvedHighlightTs)}"]`
         );
         if (target) {
           target.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -244,13 +284,13 @@ export const MessageList: React.FC<MessageListProps> = ({
   useEffect(() => {
     if (highlightRequestKey === prevHighlightKeyRef.current) return;
     prevHighlightKeyRef.current = highlightRequestKey;
-    if (!highlightRequestKey || !highlightTs) return;
+    if (!highlightRequestKey || !resolvedHighlightTs) return;
 
     const el = containerRef.current;
     if (!el) return;
     const timer = setTimeout(() => {
       const target = el.querySelector(
-        `[data-ts="${CSS.escape(highlightTs)}"]`
+        `[data-ts="${CSS.escape(resolvedHighlightTs)}"]`
       );
       if (target) {
         target.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -262,7 +302,7 @@ export const MessageList: React.FC<MessageListProps> = ({
       }
     }, 80);
     return () => clearTimeout(timer);
-  }, [highlightRequestKey, highlightTs, channelId, onScrollTopChange]);
+  }, [highlightRequestKey, resolvedHighlightTs, channelId, onScrollTopChange]);
 
   const handleToggleSortOrder = useCallback(() => {
     setSortOrder((prev) => {
@@ -386,16 +426,18 @@ export const MessageList: React.FC<MessageListProps> = ({
         <div className="flex items-center justify-between gap-2">
           <div className="slack-scroll flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto whitespace-nowrap text-[var(--slack-text-muted)] sm:flex-wrap sm:gap-2">
             <span className="shrink-0">
-              <span className="hidden sm:inline">Showing </span>
+              <span className="hidden sm:inline">{t.messageList.showing}</span>
               <strong className="text-[var(--slack-text)]">
                 {visibleMessages.length}
               </strong>{' '}
-              <span className="sm:hidden">msgs</span>
-              <span className="hidden sm:inline">messages</span>
+              <span className="sm:hidden">{t.messageList.msgsShort}</span>
+              <span className="hidden sm:inline">{t.messageList.messagesUnit}</span>
               {monthRangeLabel && (
                 <span className="hidden md:inline">
                   {' '}
-                  in <span className="font-mono-code">{monthRangeLabel}</span>
+                  <span className="font-mono-code">
+                    {t.messageList.inRange(monthRangeLabel)}
+                  </span>
                 </span>
               )}
             </span>
@@ -404,12 +446,18 @@ export const MessageList: React.FC<MessageListProps> = ({
               type="button"
               onClick={handleToggleSortOrder}
               className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[var(--slack-border)] bg-[var(--slack-main-bg)] px-2 py-0.5 text-[var(--slack-text-muted)] transition hover:text-[var(--slack-text)]"
-              title="Toggle chronological order"
+              title={t.messageList.toggleOrderTitle}
             >
               <ArrowUpDown className="h-3 w-3" />
-              <span className="sm:hidden">{sortOrder === 'asc' ? 'Oldest' : 'Latest'}</span>
+              <span className="sm:hidden">
+                {sortOrder === 'asc'
+                  ? t.messageList.oldestShort
+                  : t.messageList.latestShort}
+              </span>
               <span className="hidden sm:inline">
-                {sortOrder === 'asc' ? 'Oldest → Latest' : 'Latest → Oldest'}
+                {sortOrder === 'asc'
+                  ? t.messageList.oldestToLatest
+                  : t.messageList.latestToOldest}
               </span>
             </button>
 
@@ -418,10 +466,10 @@ export const MessageList: React.FC<MessageListProps> = ({
                 type="button"
                 onClick={scrollToLatest}
                 className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[var(--slack-border)] bg-[var(--slack-main-bg)] px-2 py-0.5 text-[var(--slack-link)] transition hover:bg-[var(--slack-badge-bg)]"
-                title="Scroll to latest loaded message"
+                title={t.messageList.scrollToLatestTitle}
               >
                 <ArrowDown className="h-3 w-3" />
-                Latest
+                {t.messageList.latestJumpBtn}
               </button>
             )}
 
@@ -434,14 +482,14 @@ export const MessageList: React.FC<MessageListProps> = ({
                     ? 'border-[var(--slack-accent)] bg-[var(--slack-accent)]/10 text-[var(--slack-link)]'
                     : 'border-[var(--slack-border)] hover:bg-[var(--slack-badge-bg)]'
                 }`}
-                title="Thread replies are grouped under their parent message; toggle to also show replies whose parent was posted in an earlier month"
+                title={t.messageList.threadRepliesTooltip}
               >
                 <Filter className="h-3 w-3" />
                 <span className="sm:hidden">+{hiddenReplyCount}</span>
                 <span className="hidden sm:inline">
                   {showHiddenReplies
-                    ? `Hiding ${hiddenReplyCount} thread replies`
-                    : `+${hiddenReplyCount} thread replies`}
+                    ? t.messageList.hidingReplies(hiddenReplyCount)
+                    : t.messageList.plusReplies(hiddenReplyCount)}
                 </span>
               </button>
             )}
@@ -455,7 +503,7 @@ export const MessageList: React.FC<MessageListProps> = ({
                 ? 'border-[var(--slack-accent)] bg-[var(--slack-accent)]/10 text-[var(--slack-link)]'
                 : 'border-[var(--slack-border)] bg-[var(--slack-main-bg)] text-[var(--slack-text-muted)]'
             }`}
-            aria-label="Filter messages"
+            aria-label={t.messageList.filterMessagesLabel}
           >
             <Search className="h-3.5 w-3.5" />
           </button>
@@ -466,7 +514,7 @@ export const MessageList: React.FC<MessageListProps> = ({
               type="text"
               value={localFilter}
               onChange={(e) => setLocalFilter(e.target.value)}
-              placeholder="Filter loaded messages..."
+              placeholder={t.messageList.filterPlaceholder}
               className="w-56 rounded-md border border-[var(--slack-border)] bg-[var(--slack-main-bg)] py-1 pr-6 pl-7 text-xs text-[var(--slack-text)] placeholder:text-[var(--slack-text-muted)] focus:border-[var(--slack-accent)] focus:outline-none"
             />
             {localFilter && (
@@ -488,7 +536,7 @@ export const MessageList: React.FC<MessageListProps> = ({
               type="text"
               value={localFilter}
               onChange={(e) => setLocalFilter(e.target.value)}
-              placeholder="Filter loaded messages..."
+              placeholder={t.messageList.filterPlaceholder}
               autoFocus
               className="w-full rounded-md border border-[var(--slack-border)] bg-[var(--slack-main-bg)] py-1.5 pr-7 pl-8 text-xs text-[var(--slack-text)] placeholder:text-[var(--slack-text-muted)] focus:border-[var(--slack-accent)] focus:outline-none"
             />
@@ -517,7 +565,7 @@ export const MessageList: React.FC<MessageListProps> = ({
           {topLoading ? (
             <div className="inline-flex items-center gap-2 rounded-full border border-[var(--slack-border)] bg-[var(--slack-surface-bg)] px-3.5 py-1 text-xs text-[var(--slack-text-muted)]">
               <Loader2 className="h-3.5 w-3.5 animate-spin text-[var(--slack-accent)]" />
-              <span>Loading {topHasMore}...</span>
+              <span>{t.messageList.loadingMonth(topHasMore || '')}</span>
             </div>
           ) : topHasMore ? (
             <button
@@ -526,14 +574,15 @@ export const MessageList: React.FC<MessageListProps> = ({
               className="inline-flex items-center gap-1.5 rounded-full border border-[var(--slack-border)] bg-[var(--slack-surface-bg)] px-3.5 py-1 text-xs font-medium text-[var(--slack-link)] transition hover:bg-[var(--slack-badge-bg)]"
             >
               <ArrowUp className="h-3.5 w-3.5" />
-              Load {sortOrder === 'asc' ? 'earlier' : 'newer'} month (
-              <span className="font-mono-code">{topHasMore}</span>)
+              {sortOrder === 'asc'
+                ? t.messageList.loadEarlierMonth(topHasMore)
+                : t.messageList.loadNewerMonth(topHasMore)}
             </button>
           ) : visibleMessages.length > 0 ? (
             <span className="text-[11px] text-[var(--slack-text-muted)]">
               {sortOrder === 'asc'
-                ? 'Beginning of archived channel history'
-                : 'Latest archived messages'}
+                ? t.messageList.beginningHistory
+                : t.messageList.latestMessages}
             </span>
           ) : null}
         </div>
@@ -542,11 +591,9 @@ export const MessageList: React.FC<MessageListProps> = ({
           <div className="flex h-full flex-col items-center justify-center px-6 py-16 text-center text-[var(--slack-text-muted)]">
             <MessageSquare className="mb-3 h-10 w-10 opacity-40" />
             <p className="text-sm font-medium text-[var(--slack-text)]">
-              No messages match this view
+              {t.messageList.noMessagesTitle}
             </p>
-            <p className="mt-1 text-xs">
-              Try clearing the filter or loading another month.
-            </p>
+            <p className="mt-1 text-xs">{t.messageList.noMessagesHint}</p>
           </div>
         ) : (
           dateGroups.map((group) => (
@@ -555,27 +602,35 @@ export const MessageList: React.FC<MessageListProps> = ({
               <div className="sticky top-0 z-10 flex items-center justify-center py-3">
                 <div className="pointer-events-none absolute inset-x-0 top-1/2 h-px bg-[var(--slack-border)]" />
                 <span className="relative rounded-full border border-[var(--slack-border)] bg-[var(--slack-main-bg)] px-3.5 py-0.5 text-xs font-semibold text-[var(--slack-text)] shadow-2xs">
-                  {formatDateDivider(group.date)}
+                  {formatDateDivider(group.date, locale)}
                 </span>
               </div>
 
-              {group.items.map((msg, idx) => (
-                <MessageItem
-                  key={msg.ts}
-                  message={msg}
-                  channelId={channelId}
-                  month={msg.date.slice(0, 7) || loadedMonths[0] || ''}
-                  compact={
-                    sortOrder === 'asc' &&
-                    shouldGroupWithPrevious(group.items[idx - 1], msg)
-                  }
-                  isHighlighted={highlightTs === msg.ts}
-                  isThreadOpen={activeThreadTs === msg.ts}
-                  onOpenThread={onOpenThread}
-                  onNavigateChannel={onNavigateChannel}
-                  onPreviewFile={onPreviewFile}
-                />
-              ))}
+              {group.blocks.map((block, idx) =>
+                block.type === 'joinGroup' ? (
+                  <ChannelJoinGroup
+                    key={`join-${group.date}-${block.messages[0]?.ts || idx}-${idx}`}
+                    messages={block.messages}
+                    channelId={channelId}
+                    channelName={channelName}
+                    highlightTs={highlightTs}
+                    onNavigateChannel={onNavigateChannel}
+                  />
+                ) : (
+                  <MessageItem
+                    key={`${block.message.ts}-${idx}`}
+                    message={block.message}
+                    channelId={channelId}
+                    month={block.message.date.slice(0, 7) || loadedMonths[0] || ''}
+                    compact={block.compact}
+                    isHighlighted={messageMatchesTs(block.message, highlightTs)}
+                    isThreadOpen={activeThreadTs === block.message.ts}
+                    onOpenThread={onOpenThread}
+                    onNavigateChannel={onNavigateChannel}
+                    onPreviewFile={onPreviewFile}
+                  />
+                )
+              )}
             </div>
           ))
         )}
@@ -585,7 +640,7 @@ export const MessageList: React.FC<MessageListProps> = ({
           {bottomLoading ? (
             <div className="inline-flex items-center gap-2 rounded-full border border-[var(--slack-border)] bg-[var(--slack-surface-bg)] px-3.5 py-1 text-xs text-[var(--slack-text-muted)]">
               <Loader2 className="h-3.5 w-3.5 animate-spin text-[var(--slack-accent)]" />
-              <span>Loading {bottomHasMore}...</span>
+              <span>{t.messageList.loadingMonth(bottomHasMore || '')}</span>
             </div>
           ) : bottomHasMore ? (
             <button
@@ -594,14 +649,15 @@ export const MessageList: React.FC<MessageListProps> = ({
               className="inline-flex items-center gap-1.5 rounded-full border border-[var(--slack-border)] bg-[var(--slack-surface-bg)] px-3.5 py-1 text-xs font-medium text-[var(--slack-link)] transition hover:bg-[var(--slack-badge-bg)]"
             >
               <ArrowDown className="h-3.5 w-3.5" />
-              Load {sortOrder === 'asc' ? 'newer' : 'earlier'} month (
-              <span className="font-mono-code">{bottomHasMore}</span>)
+              {sortOrder === 'asc'
+                ? t.messageList.loadNewerMonth(bottomHasMore)
+                : t.messageList.loadEarlierMonth(bottomHasMore)}
             </button>
           ) : visibleMessages.length > 0 ? (
             <span className="text-[11px] text-[var(--slack-text-muted)]">
               {sortOrder === 'asc'
-                ? 'End of archived channel history (latest)'
-                : 'Beginning of archived channel history'}
+                ? t.messageList.endHistoryLatest
+                : t.messageList.beginningHistory}
             </span>
           ) : null}
         </div>

@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { ArrowLeft, Hash, X } from 'lucide-react';
+import { useI18n } from '../i18n/I18nContext';
 import type { ArchiveMessage, MessageFile } from '../types';
+import { dedupeReplies } from '../utils/dedupeMessages';
 import { formatShortTime } from '../utils/format';
 import { MessageItem } from './MessageItem';
 import { RichContent } from './RichContent';
@@ -24,6 +26,12 @@ export const ThreadPanel: React.FC<ThreadPanelProps> = ({
   onNavigateChannel,
   onPreviewFile,
 }) => {
+  const { t } = useI18n();
+  const replies = useMemo(
+    () => dedupeReplies(message.replies),
+    [message.replies]
+  );
+
   return (
     <aside className="fixed inset-0 z-40 flex h-dvh w-full shrink-0 flex-col border-l border-[var(--slack-border)] bg-[var(--slack-main-bg)] md:static md:z-auto md:h-full md:w-[380px] lg:w-[420px]">
       {/* Header */}
@@ -33,13 +41,13 @@ export const ThreadPanel: React.FC<ThreadPanelProps> = ({
             type="button"
             onClick={onClose}
             className="rounded-md p-1 text-[var(--slack-text-muted)] hover:bg-[var(--slack-badge-bg)] md:hidden"
-            aria-label="Back to channel"
+            aria-label={t.threadPanel.backToChannel}
           >
             <ArrowLeft className="h-4 w-4" />
           </button>
           <div className="min-w-0">
           <h2 className="text-base font-bold text-[var(--slack-text)]">
-            Thread
+            {t.threadPanel.title}
           </h2>
           <div className="flex items-center gap-1 text-xs text-[var(--slack-text-muted)]">
             <Hash className="h-3 w-3" />
@@ -51,7 +59,7 @@ export const ThreadPanel: React.FC<ThreadPanelProps> = ({
           type="button"
           onClick={onClose}
           className="rounded-md p-1.5 text-[var(--slack-text-muted)] hover:bg-[var(--slack-badge-bg)] hover:text-[var(--slack-text)]"
-          aria-label="Close thread"
+          aria-label={t.threadPanel.closeThread}
         >
           <X className="h-4 w-4" />
         </button>
@@ -71,21 +79,20 @@ export const ThreadPanel: React.FC<ThreadPanelProps> = ({
         {/* Divider */}
         <div className="my-2 flex items-center gap-3 px-5">
           <span className="text-xs font-medium text-[var(--slack-text-muted)]">
-            {message.replies.length}{' '}
-            {message.replies.length === 1 ? 'reply' : 'replies'}
+            {t.threadPanel.replyCount(replies.length)}
           </span>
           <div className="h-px flex-1 bg-[var(--slack-border)]" />
         </div>
 
-        {message.replies.length === 0 ? (
+        {replies.length === 0 ? (
           <div className="px-5 py-6 text-center text-xs text-[var(--slack-text-muted)]">
-            No replies in this thread yet.
+            {t.threadPanel.noReplies}
           </div>
         ) : (
           <div className="space-y-1">
-            {message.replies.map((reply) => (
+            {replies.map((reply, idx) => (
               <div
-                key={reply.ts}
+                key={`${reply.ts}-${idx}`}
                 className="flex gap-3 px-5 py-2 hover:bg-[var(--slack-surface-hover)]"
               >
                 <img

@@ -87,6 +87,10 @@ export interface MessageReaction {
 
 export interface ThreadReply {
   ts: string;
+  rawTs?: string;
+  clientMsgId?: string;
+  eventTs?: string;
+  aliasTs?: string[];
   timeLabel: string;
   user: SlackUserProfile;
   contentsHtml: string;
@@ -95,6 +99,10 @@ export interface ThreadReply {
 
 export interface ArchiveMessage {
   ts: string;
+  rawTs?: string;
+  clientMsgId?: string;
+  eventTs?: string;
+  aliasTs?: string[];
   date: string;
   timeLabel: string;
   user: SlackUserProfile;

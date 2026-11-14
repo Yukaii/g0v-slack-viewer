@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { ExternalLink, X } from 'lucide-react';
+import { useI18n } from '../i18n/I18nContext';
 import type { MessageFile } from '../types';
 import { formatFileSize } from '../utils/format';
 
@@ -12,6 +13,8 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
   file,
   onClose,
 }) => {
+  const { t } = useI18n();
+
   useEffect(() => {
     if (!file) return;
     const onKeyDown = (e: KeyboardEvent) => {
@@ -53,13 +56,13 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
               className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-medium text-white/80 hover:bg-white/10 hover:text-white"
             >
               <ExternalLink className="h-3.5 w-3.5" />
-              Open
+              {t.lightbox.openOriginal}
             </a>
             <button
               type="button"
               onClick={onClose}
               className="rounded-md p-1.5 text-white/70 hover:bg-white/10 hover:text-white"
-              aria-label="Close preview"
+              aria-label={t.lightbox.closePreview}
             >
               <X className="h-4 w-4" />
             </button>

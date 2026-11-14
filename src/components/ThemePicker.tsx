@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Check, Palette } from 'lucide-react';
+import { useI18n } from '../i18n/I18nContext';
 import { APP_THEMES, getThemeMeta, type AppThemeId } from '../utils/themes';
 
 interface ThemePickerProps {
@@ -11,9 +12,11 @@ export const ThemePicker: React.FC<ThemePickerProps> = ({
   theme,
   onSelectTheme,
 }) => {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const current = getThemeMeta(theme);
+  const currentName = t.themes.items[theme].name;
 
   useEffect(() => {
     if (!open) return;
@@ -31,7 +34,7 @@ export const ThemePicker: React.FC<ThemePickerProps> = ({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        title={`Theme: ${current.name}`}
+        title={t.themes.themeLabel(currentName)}
         className="inline-flex items-center gap-1.5 rounded-md border border-white/15 bg-white/10 px-2 py-1 text-xs font-medium text-white/90 transition hover:bg-white/20"
       >
         <span
@@ -39,16 +42,17 @@ export const ThemePicker: React.FC<ThemePickerProps> = ({
           style={{ backgroundColor: current.swatchAccent }}
         />
         <Palette className="h-3.5 w-3.5 opacity-80" />
-        <span className="hidden lg:inline">{current.name}</span>
+        <span className="hidden lg:inline">{currentName}</span>
       </button>
 
       {open && (
         <div className="absolute top-full right-0 z-50 mt-2 w-60 overflow-hidden rounded-xl border border-[var(--slack-border)] bg-[var(--slack-main-bg)] p-1.5 text-[var(--slack-text)] shadow-2xl">
           <div className="px-2.5 py-1.5 text-[11px] font-semibold tracking-wider text-[var(--slack-text-muted)] uppercase">
-            g0v Themes
+            {t.themes.title}
           </div>
           {APP_THEMES.map((item) => {
             const active = item.id === theme;
+            const localized = t.themes.items[item.id];
             return (
               <button
                 key={item.id}
@@ -81,10 +85,10 @@ export const ThemePicker: React.FC<ThemePickerProps> = ({
                   </span>
                   <div className="min-w-0">
                     <div className="truncate text-xs font-semibold">
-                      {item.name}
+                      {localized.name}
                     </div>
                     <div className="truncate text-[11px] text-[var(--slack-text-muted)]">
-                      {item.subtitle}
+                      {localized.subtitle}
                     </div>
                   </div>
                 </div>

@@ -149,10 +149,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   零時政府
                 </span>
               </div>
+              <div className="truncate text-[11px] font-medium text-white/75">
+                {t.topBar.subtitle}
+              </div>
             </div>
           </div>
           {stats && (
-            <div className="mt-0.5 truncate text-[11px] text-white/60">
+            <div className="mt-1 truncate text-[11px] text-white/55">
               {t.sidebar.stats(
                 formatCompactNumber(stats.messages),
                 stats.channels

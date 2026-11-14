@@ -35,14 +35,16 @@ export const ThemePicker: React.FC<ThemePickerProps> = ({
         type="button"
         onClick={() => setOpen((v) => !v)}
         title={t.themes.themeLabel(currentName)}
-        className="inline-flex items-center gap-1.5 rounded-md border border-white/15 bg-white/10 px-2 py-0.5 text-xs font-medium text-white/90 transition hover:bg-white/20"
+        aria-label={t.themes.themeLabel(currentName)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        className="inline-flex h-6 items-center gap-1.5 rounded-md border border-white/15 bg-white/10 px-2 text-xs font-medium text-white/90 transition hover:bg-white/20"
       >
         <span
           className="h-2.5 w-2.5 rounded-full ring-1 ring-white/40"
           style={{ backgroundColor: current.swatchAccent }}
         />
-        <Palette className="h-3.5 w-3.5 opacity-80" />
-        <span className="hidden lg:inline">{currentName}</span>
+        <Palette className="h-3.5 w-3.5 opacity-85" />
       </button>
 
       {open && (

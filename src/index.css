@@ -155,6 +155,42 @@ body,
   background-color: var(--slack-badge-bg);
 }
 
+.slack-html .special-mention {
+  font-weight: 600;
+  color: #92400e;
+  background-color: rgba(245, 158, 11, 0.18);
+  padding: 0 4px;
+  border-radius: 3px;
+}
+
+html[data-theme="g0v-dark"] .slack-html .special-mention,
+html.dark .slack-html .special-mention {
+  color: #fcd34d;
+  background-color: rgba(245, 158, 11, 0.22);
+}
+
+.slack-html .special-mention-unknown {
+  font-weight: 500;
+}
+
+.slack-html .user-mention {
+  font-weight: 600;
+  color: var(--slack-link);
+  background-color: color-mix(in srgb, var(--slack-link) 10%, transparent);
+  padding: 0 3px;
+  border-radius: 3px;
+}
+
+.slack-html span.user-mention-unknown {
+  color: var(--slack-text-muted);
+  background-color: var(--slack-badge-bg);
+}
+
+.slack-html .slack-date {
+  text-decoration: underline dotted var(--slack-text-muted);
+  text-underline-offset: 2px;
+}
+
 .slack-html img {
   display: inline-block;
   width: 20px;

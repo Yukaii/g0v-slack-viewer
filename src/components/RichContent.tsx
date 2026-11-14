@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo } from 'react';
 import {
-  resolveChannelReferencesInHtml,
+  resolveSlackEntitiesInHtml,
   useChannelMap,
 } from '../context/ChannelMapContext';
 import { parseArchiveChannelHref } from '../utils/format';
@@ -19,7 +19,7 @@ export const RichContent: React.FC<RichContentProps> = ({
   const channelMap = useChannelMap();
 
   const resolvedHtml = useMemo(
-    () => resolveChannelReferencesInHtml(html, channelMap),
+    () => resolveSlackEntitiesInHtml(html, channelMap),
     [html, channelMap]
   );
 

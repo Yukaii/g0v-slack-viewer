@@ -6,6 +6,7 @@ const STARRED_KEY = 'g0v_slack_starred_channels';
 const THEME_KEY = 'g0v_slack_theme';
 const RECENT_KEY = 'g0v_slack_recent_channels';
 const LOCALE_KEY = 'g0v_slack_locale';
+const SIDEBAR_KEY = 'g0v_slack_sidebar_open';
 
 const DEFAULT_STARRED = [
   'C02G2SXKX', // #general
@@ -14,6 +15,24 @@ const DEFAULT_STARRED = [
   'C0385B90D', // #jothon
   'C2PPMRQGP', // #cofacts
 ];
+
+export function loadDesktopSidebarOpen(): boolean {
+  try {
+    const raw = localStorage.getItem(SIDEBAR_KEY);
+    if (raw === '0' || raw === 'false') return false;
+    return true;
+  } catch {
+    return true;
+  }
+}
+
+export function saveDesktopSidebarOpen(open: boolean): void {
+  try {
+    localStorage.setItem(SIDEBAR_KEY, open ? '1' : '0');
+  } catch {
+    // ignore
+  }
+}
 
 export function loadLocale(): Locale {
   try {

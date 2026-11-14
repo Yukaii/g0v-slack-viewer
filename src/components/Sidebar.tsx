@@ -25,6 +25,7 @@ interface SidebarProps {
   viewMode: 'channel' | 'directory';
   starredIds: string[];
   recentIds: string[];
+  desktopOpen?: boolean;
   mobileOpen: boolean;
   onCloseMobile: () => void;
   onSelectChannel: (channelId: string) => void;
@@ -42,6 +43,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   viewMode,
   starredIds,
   recentIds,
+  desktopOpen = true,
   mobileOpen,
   onCloseMobile,
   onSelectChannel,
@@ -382,7 +384,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <>
       {/* Desktop sidebar */}
-      <div className="hidden h-full shrink-0 lg:block">{sidebarContent}</div>
+      {desktopOpen && (
+        <div className="hidden h-full shrink-0 lg:block">{sidebarContent}</div>
+      )}
 
       {/* Mobile drawer */}
       {mobileOpen && (

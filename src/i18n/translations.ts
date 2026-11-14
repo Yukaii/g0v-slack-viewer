@@ -33,12 +33,16 @@ export interface Translations {
   };
   channelHeader: {
     openSidebar: string;
+    hideSidebar: string;
+    showSidebar: string;
+    selectYear: string;
     directoryTitle: string;
     unstarChannel: string;
     starChannel: string;
     jumpOrSearch: string;
     channelDetails: string;
     detailsShort: string;
+    viewMembers: string;
     previousMonth: string;
     nextMonth: string;
     latest: string;
@@ -62,12 +66,22 @@ export interface Translations {
   channelInfo: {
     title: string;
     closeInfo: string;
+    aboutTab: string;
+    membersTab: string;
     topic: string;
     noTopic: string;
     description: string;
     noDescription: string;
     archiveMetadata: string;
     members: string;
+    membersCountTitle: (count: string) => string;
+    participantsHint: (loaded: number, months: string) => string;
+    searchMembersPlaceholder: string;
+    noMembersYet: string;
+    noMemberMatches: (query: string) => string;
+    memberPosts: (count: number) => string;
+    botBadge: string;
+    jumpToLatestPost: string;
     archivedMessages: string;
     created: string;
     lastPosted: string;
@@ -229,12 +243,16 @@ export const zhTW: Translations = {
   },
   channelHeader: {
     openSidebar: '開啟側邊欄',
+    hideSidebar: '隱藏側邊欄',
+    showSidebar: '顯示側邊欄',
+    selectYear: '選擇年份',
     directoryTitle: '頻道目錄',
     unstarChannel: '取消星號',
     starChannel: '加入星號',
     jumpOrSearch: '跳轉頻道或搜尋',
     channelDetails: '頻道資訊',
     detailsShort: '詳情',
+    viewMembers: '查看頻道成員',
     previousMonth: '上個月',
     nextMonth: '下個月',
     latest: '最新',
@@ -259,12 +277,23 @@ export const zhTW: Translations = {
   channelInfo: {
     title: '頻道資訊',
     closeInfo: '關閉頻道資訊',
+    aboutTab: '關於',
+    membersTab: '成員',
     topic: '主題',
     noTopic: '尚未設定主題',
     description: '頻道說明',
     noDescription: '尚未提供說明',
     archiveMetadata: '封存資訊',
     members: '成員數',
+    membersCountTitle: (count) => `此頻道共有 ${count} 位成員`,
+    participantsHint: (loaded, months) =>
+      `公開封存僅提供成員總數；以下列出已載入月份（${months}）中曾發言或互動的 ${loaded} 位成員。`,
+    searchMembersPlaceholder: '搜尋成員名稱或職稱…',
+    noMembersYet: '目前載入的月份尚無可顯示的發言成員。',
+    noMemberMatches: (query) => `找不到符合「${query}」的成員。`,
+    memberPosts: (count) => `${count} 則`,
+    botBadge: '機器人',
+    jumpToLatestPost: '跳至最新發言',
     archivedMessages: '封存訊息數',
     created: '建立時間',
     lastPosted: '最後發言',
@@ -440,12 +469,16 @@ export const en: Translations = {
   },
   channelHeader: {
     openSidebar: 'Open sidebar',
+    hideSidebar: 'Hide sidebar',
+    showSidebar: 'Show sidebar',
+    selectYear: 'Select year',
     directoryTitle: 'Channel Directory',
     unstarChannel: 'Unstar channel',
     starChannel: 'Star channel',
     jumpOrSearch: 'Jump to channel or search',
     channelDetails: 'Channel details',
     detailsShort: 'Details',
+    viewMembers: 'View channel members',
     previousMonth: 'Previous month',
     nextMonth: 'Next month',
     latest: 'Latest',
@@ -470,12 +503,23 @@ export const en: Translations = {
   channelInfo: {
     title: 'Channel Info',
     closeInfo: 'Close channel info',
+    aboutTab: 'About',
+    membersTab: 'Members',
     topic: 'Topic',
     noTopic: 'No topic set',
     description: 'Description',
     noDescription: 'No description provided',
     archiveMetadata: 'Archive Metadata',
     members: 'Members',
+    membersCountTitle: (count) => `${count} members in channel`,
+    participantsHint: (loaded, months) =>
+      `The public archive only publishes total member count; showing ${loaded} active participants from loaded months (${months}).`,
+    searchMembersPlaceholder: 'Search members by name or title...',
+    noMembersYet: 'No message authors found in the loaded months.',
+    noMemberMatches: (query) => `No members matched "${query}".`,
+    memberPosts: (count) => `${count} ${count === 1 ? 'post' : 'posts'}`,
+    botBadge: 'BOT',
+    jumpToLatestPost: 'Jump to latest message',
     archivedMessages: 'Archived Messages',
     created: 'Created',
     lastPosted: 'Last Posted',
@@ -651,12 +695,16 @@ export const ja: Translations = {
   },
   channelHeader: {
     openSidebar: 'サイドバーを開く',
+    hideSidebar: 'サイドバーを非表示',
+    showSidebar: 'サイドバーを表示',
+    selectYear: '年を選択',
     directoryTitle: 'チャンネル一覧',
     unstarChannel: 'スターを外す',
     starChannel: 'スターを付ける',
     jumpOrSearch: 'チャンネル移動または検索',
     channelDetails: 'チャンネル詳細',
     detailsShort: '詳細',
+    viewMembers: 'チャンネルメンバーを表示',
     previousMonth: '前の月',
     nextMonth: '次の月',
     latest: '最新',
@@ -681,12 +729,23 @@ export const ja: Translations = {
   channelInfo: {
     title: 'チャンネル情報',
     closeInfo: 'チャンネル情報を閉じる',
+    aboutTab: '概要',
+    membersTab: 'メンバー',
     topic: 'トピック',
     noTopic: 'トピックは設定されていません',
     description: '説明',
     noDescription: '説明はありません',
     archiveMetadata: 'アーカイブ情報',
     members: 'メンバー数',
+    membersCountTitle: (count) => `チャンネルメンバー ${count} 人`,
+    participantsHint: (loaded, months) =>
+      `公開アーカイブではメンバー総数のみ提供されています。読み込み済みの月（${months}）で投稿した ${loaded} 人のメンバーを表示しています。`,
+    searchMembersPlaceholder: 'メンバー名や肩書で検索…',
+    noMembersYet: '読み込まれた月には投稿メンバーがいません。',
+    noMemberMatches: (query) => `「${query}」に一致するメンバーは見つかりませんでした。`,
+    memberPosts: (count) => `${count} 件`,
+    botBadge: 'BOT',
+    jumpToLatestPost: '最新の投稿へ移動',
     archivedMessages: 'アーカイブ投稿数',
     created: '作成日時',
     lastPosted: '最終投稿',

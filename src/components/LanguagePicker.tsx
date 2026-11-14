@@ -37,7 +37,7 @@ export const LanguagePicker: React.FC = () => {
         title={t.switchLangTitle}
         aria-haspopup="menu"
         aria-expanded={open}
-        className="inline-flex items-center gap-1 rounded-md border border-white/15 bg-white/10 px-2 py-1 text-xs font-medium text-white/90 transition hover:bg-white/20"
+        className="inline-flex items-center gap-1 rounded-md border border-white/15 bg-white/10 px-2 py-0.5 text-xs font-medium text-white/90 transition hover:bg-white/20"
       >
         <Languages className="h-3.5 w-3.5 opacity-85" />
         <span>{t.langShort}</span>

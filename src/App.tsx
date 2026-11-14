@@ -15,10 +15,12 @@ import type {
   MessageFile,
 } from './types';
 import {
+  loadDesktopSidebarOpen,
   loadRecentChannels,
   loadStarredChannels,
   loadTheme,
   recordRecentChannel,
+  saveDesktopSidebarOpen,
   saveStarredChannels,
   saveTheme,
 } from './utils/storage';
@@ -28,7 +30,7 @@ import {
 } from './utils/dedupeMessages';
 import { useI18n } from './i18n/I18nContext';
 import { Sidebar } from './components/Sidebar';
-import { ChannelHeader } from './components/ChannelHeader';
+import { ChannelHeader, type ChannelInfoTab } from './components/ChannelHeader';
 import { MessageList } from './components/MessageList';
 import { ThreadPanel } from './components/ThreadPanel';
 import { ChannelInfoPanel } from './components/ChannelInfoPanel';
@@ -163,12 +165,25 @@ export const App: React.FC = () => {
   const channelCacheRef = useRef<Map<string, CachedChannelState>>(new Map());
 
   const [activeThread, setActiveThread] = useState<ArchiveMessage | null>(null);
-  const [showChannelInfo, setShowChannelInfo] = useState(false);
+  const [channelInfoTab, setChannelInfoTab] = useState<ChannelInfoTab | null>(
+    null
+  );
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteMode, setPaletteMode] = useState<PaletteMode>('switcher');
   const shortcutLabel = useMemo(() => getCommandShortcutLabel(), []);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [desktopSidebarOpen, setDesktopSidebarOpen] = useState<boolean>(() =>
+    loadDesktopSidebarOpen()
+  );
   const [previewFile, setPreviewFile] = useState<MessageFile | null>(null);
+
+  const toggleDesktopSidebar = useCallback(() => {
+    setDesktopSidebarOpen((prev) => {
+      const next = !prev;
+      saveDesktopSidebarOpen(next);
+      return next;
+    });
+  }, []);
 
   const cycleTheme = useCallback(() => {
     setTheme((prev) => {
@@ -195,9 +210,14 @@ export const App: React.FC = () => {
     setPaletteOpen(true);
   }, []);
 
-  // Global Slack-like keyboard shortcuts (Cmd/Ctrl+K Quick Switcher, Cmd/Ctrl+Shift+K Directory)
+  // Global Slack-like keyboard shortcuts (Cmd/Ctrl+K Quick Switcher, Cmd/Ctrl+Shift+K Directory, Cmd/Ctrl+\ Sidebar)
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === '\\') {
+        e.preventDefault();
+        toggleDesktopSidebar();
+        return;
+      }
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         if (e.shiftKey) {
@@ -208,7 +228,7 @@ export const App: React.FC = () => {
             seq: prev.seq + 1,
           }));
           setActiveThread(null);
-          setShowChannelInfo(false);
+          setChannelInfoTab(null);
           window.history.pushState(null, '', '/channels');
           return;
         }
@@ -227,7 +247,7 @@ export const App: React.FC = () => {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [paletteMode]);
+  }, [paletteMode, toggleDesktopSidebar]);
 
   // Load workspace stats & channels on mount
   useEffect(() => {
@@ -551,7 +571,7 @@ export const App: React.FC = () => {
       seq: prev.seq + 1,
     }));
     setActiveThread(null);
-    setShowChannelInfo(false);
+    setChannelInfoTab(null);
     window.history.pushState(null, '', '/channels');
   }, []);
 
@@ -571,14 +591,25 @@ export const App: React.FC = () => {
   );
 
   const handleOpenThread = useCallback((msg: ArchiveMessage) => {
-    setShowChannelInfo(false);
+    setChannelInfoTab(null);
     setActiveThread(msg);
   }, []);
 
   const handleToggleInfo = useCallback(() => {
     setActiveThread(null);
-    setShowChannelInfo((v) => !v);
+    setChannelInfoTab((prev) => (prev === 'about' ? null : 'about'));
   }, []);
+
+  const handleToggleMembers = useCallback(() => {
+    setActiveThread(null);
+    setChannelInfoTab((prev) => (prev === 'members' ? null : 'members'));
+  }, []);
+
+  const closeChannelInfo = useCallback(() => setChannelInfoTab(null), []);
+  const toggleActiveChannelStar = useCallback(
+    () => toggleStar(activeChannelId),
+    [toggleStar, activeChannelId]
+  );
 
   const closeMobileSidebar = useCallback(() => setMobileSidebarOpen(false), []);
   const openMobileSidebar = useCallback(() => setMobileSidebarOpen(true), []);
@@ -599,7 +630,7 @@ export const App: React.FC = () => {
     <ChannelMapProvider channels={channels}>
     <div className="flex h-dvh w-full max-w-full flex-col overflow-hidden bg-[var(--slack-main-bg)] text-[var(--slack-text)]">
       {/* Top Slack Workspace Bar */}
-      <div className="hidden h-11 shrink-0 items-center justify-between gap-3 border-b-2 border-[var(--g0v-brand-accent)] bg-[var(--slack-top-bg)] px-3 text-white sm:flex">
+      <div className="hidden h-9 shrink-0 items-center justify-between gap-3 border-b-2 border-[var(--g0v-brand-accent)] bg-[var(--slack-top-bg)] px-3 text-white sm:flex">
         <div className="hidden w-56 shrink-0 items-center gap-2 text-xs text-white/75 md:flex">
           <G0vLogo variant="wordmark" size="sm" />
           <span className="whitespace-nowrap font-semibold tracking-tight text-white">
@@ -614,14 +645,14 @@ export const App: React.FC = () => {
         <button
           type="button"
           onClick={openSwitcher}
-          className="flex h-7 w-full max-w-xl items-center justify-between rounded-md border border-white/15 bg-white/15 px-3 text-xs text-white/85 transition hover:bg-white/25"
+          className="flex h-6 w-full max-w-xl items-center justify-between rounded-md border border-white/15 bg-white/15 px-2.5 text-xs text-white/85 transition hover:bg-white/25"
         >
           <span className="flex items-center gap-2 truncate">
             <Search className="h-3.5 w-3.5 shrink-0" />
             <span className="truncate sm:hidden">{t.topBar.jumpOrSearchShort}</span>
             <span className="hidden truncate sm:inline">{t.topBar.jumpOrSearchLong}</span>
           </span>
-          <kbd className="hidden rounded bg-black/25 px-1.5 py-0.5 text-[10px] font-medium text-white/80 sm:inline">
+          <kbd className="hidden rounded bg-black/25 px-1.5 py-0.2 text-[10px] font-medium text-white/80 sm:inline">
             {shortcutLabel}
           </kbd>
         </button>
@@ -635,7 +666,7 @@ export const App: React.FC = () => {
             target="_blank"
             rel="noopener noreferrer"
             title={t.topBar.githubTitle}
-            className="hidden items-center gap-1.5 rounded-md px-2 py-1 text-xs text-white/80 hover:bg-white/15 hover:text-white sm:inline-flex"
+            className="hidden items-center gap-1.5 rounded-md px-2 py-0.5 text-xs text-white/80 hover:bg-white/15 hover:text-white sm:inline-flex"
           >
             <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 fill-current" aria-hidden="true">
               <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z" />
@@ -647,7 +678,7 @@ export const App: React.FC = () => {
             target="_blank"
             rel="noopener noreferrer"
             title={t.topBar.archiveLinkTitle}
-            className="hidden items-center gap-1 rounded-md px-2 py-1 text-xs text-white/75 hover:bg-white/15 hover:text-white sm:inline-flex"
+            className="hidden items-center gap-1 rounded-md px-2 py-0.5 text-xs text-white/75 hover:bg-white/15 hover:text-white sm:inline-flex"
           >
             <span>{t.topBar.archiveLink}</span>
             <ExternalLink className="h-3 w-3" />
@@ -664,6 +695,7 @@ export const App: React.FC = () => {
           viewMode={viewMode}
           starredIds={starredIds}
           recentIds={recentIds}
+          desktopOpen={desktopSidebarOpen}
           mobileOpen={mobileSidebarOpen}
           onCloseMobile={closeMobileSidebar}
           onSelectChannel={selectChannelRoot}
@@ -681,6 +713,8 @@ export const App: React.FC = () => {
               channels={channels}
               stats={stats}
               starredIds={starredIds}
+              desktopSidebarOpen={desktopSidebarOpen}
+              onToggleDesktopSidebar={toggleDesktopSidebar}
               onSelectChannel={selectChannelRoot}
               onToggleStar={toggleStar}
               onOpenMobileSidebar={openMobileSidebar}
@@ -693,12 +727,15 @@ export const App: React.FC = () => {
                 loadedMonths={activeDetail ? loadedMonths : []}
                 loading={channelLoading}
                 isStarred={starredIds.includes(activeChannelId)}
-                showInfo={showChannelInfo}
-                onToggleStar={() => toggleStar(activeChannelId)}
+                infoTab={activeThread ? null : channelInfoTab}
+                desktopSidebarOpen={desktopSidebarOpen}
+                onToggleDesktopSidebar={toggleDesktopSidebar}
+                onToggleStar={toggleActiveChannelStar}
                 onToggleInfo={handleToggleInfo}
+                onToggleMembers={handleToggleMembers}
                 onSelectMonth={handleSelectMonth}
-                onOpenMobileSidebar={() => setMobileSidebarOpen(true)}
-                onOpenSwitcher={() => openPalette('switcher')}
+                onOpenMobileSidebar={openMobileSidebar}
+                onOpenSwitcher={openSwitcher}
                 onNavigateChannel={navigateToChannel}
               />
 
@@ -782,12 +819,16 @@ export const App: React.FC = () => {
         )}
 
         {viewMode === 'channel' &&
-          showChannelInfo &&
+          channelInfoTab &&
           !activeThread &&
           activeChannelSummary && (
             <ChannelInfoPanel
               channel={activeChannelSummary}
-              onClose={() => setShowChannelInfo(false)}
+              activeTab={channelInfoTab}
+              messages={loadedMessages}
+              loadedMonths={loadedMonths}
+              onTabChange={setChannelInfoTab}
+              onClose={closeChannelInfo}
               onNavigateChannel={navigateToChannel}
             />
           )}

@@ -5,6 +5,7 @@ export interface Translations {
   langLabel: string;
   langShort: string;
   switchLangTitle: string;
+  unreadLabel: string;
   appTitle: string;
   topBar: {
     subtitle: string;
@@ -215,6 +216,7 @@ export const zhTW: Translations = {
   langLabel: '正體中文',
   langShort: '正體中文',
   switchLangTitle: '切換語言 (正體中文 / English / 日本語)',
+  unreadLabel: '有新訊息',
   appTitle: 'g0v.tw | Slack 封存檢視器',
   topBar: {
     subtitle: 'Slack 封存檢視器',
@@ -441,6 +443,7 @@ export const en: Translations = {
   langLabel: 'English',
   langShort: 'EN',
   switchLangTitle: 'Switch language (正體中文 / English / 日本語)',
+  unreadLabel: 'New messages',
   appTitle: 'g0v.tw | Slack Archive Viewer',
   topBar: {
     subtitle: 'Slack Archive Viewer',
@@ -667,6 +670,7 @@ export const ja: Translations = {
   langLabel: '日本語',
   langShort: '日本語',
   switchLangTitle: '言語を切り替え (正體中文 / English / 日本語)',
+  unreadLabel: '新着メッセージ',
   appTitle: 'g0v.tw | Slack アーカイブビューア',
   topBar: {
     subtitle: 'Slack アーカイブビューア',

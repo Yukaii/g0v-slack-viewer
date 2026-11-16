@@ -25,6 +25,7 @@ interface SidebarProps {
   viewMode: 'channel' | 'directory';
   starredIds: string[];
   recentIds: string[];
+  unreadIds?: ReadonlySet<string>;
   desktopOpen?: boolean;
   mobileOpen: boolean;
   onCloseMobile: () => void;
@@ -43,6 +44,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   viewMode,
   starredIds,
   recentIds,
+  unreadIds,
   desktopOpen = true,
   mobileOpen,
   onCloseMobile,
@@ -102,6 +104,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const renderChannelRow = (ch: ChannelSummary) => {
     const isActive = viewMode === 'channel' && activeChannelId === ch.id;
+    const isUnread = Boolean(unreadIds?.has(ch.id));
     return (
       <button
         key={ch.id}
@@ -113,12 +116,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
         className={`group flex w-full items-center justify-between gap-2 rounded-md px-2.5 py-1 text-left text-[14px] transition-colors ${
           isActive
             ? 'bg-[var(--slack-sidebar-active)] font-semibold text-white'
-            : 'text-[var(--slack-sidebar-text)] hover:bg-[var(--slack-sidebar-hover)] hover:text-white'
+            : isUnread
+              ? 'font-semibold text-white hover:bg-[var(--slack-sidebar-hover)]'
+              : 'text-[var(--slack-sidebar-text)] hover:bg-[var(--slack-sidebar-hover)] hover:text-white'
         }`}
       >
         <span className="flex min-w-0 items-center gap-2">
           <Hash className="h-3.5 w-3.5 shrink-0 opacity-75" />
           <span className="truncate">{ch.name}</span>
+          {isUnread && (
+            <span
+              title={t.unreadLabel}
+              aria-label={t.unreadLabel}
+              className="h-1.5 w-1.5 shrink-0 rounded-full bg-sky-400"
+            />
+          )}
         </span>
         {ch.messageCount > 0 && (
           <span

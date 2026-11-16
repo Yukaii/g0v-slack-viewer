@@ -22,6 +22,7 @@ interface ChannelDirectoryProps {
   channels: ChannelSummary[];
   stats: ArchiveStats | null;
   starredIds: string[];
+  unreadIds?: ReadonlySet<string>;
   desktopSidebarOpen?: boolean;
   onToggleDesktopSidebar?: () => void;
   onSelectChannel: (channelId: string) => void;
@@ -33,6 +34,7 @@ export const ChannelDirectory: React.FC<ChannelDirectoryProps> = ({
   channels,
   stats,
   starredIds,
+  unreadIds,
   desktopSidebarOpen = true,
   onToggleDesktopSidebar,
   onSelectChannel,
@@ -163,6 +165,7 @@ export const ChannelDirectory: React.FC<ChannelDirectoryProps> = ({
       <div className="slack-scroll min-h-0 flex-1 overflow-y-auto divide-y divide-[var(--slack-border)]">
         {filtered.map((ch) => {
           const isStarred = starredSet.has(ch.id);
+          const isUnread = Boolean(unreadIds?.has(ch.id));
           return (
             <div
               key={ch.id}
@@ -175,6 +178,12 @@ export const ChannelDirectory: React.FC<ChannelDirectoryProps> = ({
                     <Hash className="h-4 w-4 text-[var(--slack-text-muted)]" />
                     {ch.name}
                   </span>
+                  {isUnread && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-[var(--slack-accent)]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[var(--slack-link)]">
+                      <span className="h-1.5 w-1.5 rounded-full bg-[var(--slack-accent)]" />
+                      {t.unreadLabel}
+                    </span>
+                  )}
                   {ch.isArchived && (
                     <span className="rounded bg-[var(--slack-badge-bg)] px-1.5 py-0.5 text-[10px] font-semibold uppercase text-[var(--slack-text-muted)]">
                       {t.channelDirectory.archived}

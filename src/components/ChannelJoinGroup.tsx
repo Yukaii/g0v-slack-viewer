@@ -54,6 +54,12 @@ export const ChannelJoinGroup: React.FC<ChannelJoinGroupProps> = ({
   }, [hasHighlighted]);
 
   const resolvedChannelName = channelName || channelId;
+  const spansMultipleDays =
+    messages.length > 1 && messages.some((m) => m.date !== messages[0].date);
+  const joinTimeLabel = (msg: ArchiveMessage) =>
+    spansMultipleDays
+      ? `${msg.date.slice(5)} ${formatShortTime(msg.timeLabel)}`
+      : formatShortTime(msg.timeLabel);
 
   const handleCopyLink = (msg: ArchiveMessage) => {
     const month = msg.date.slice(0, 7);
@@ -217,7 +223,7 @@ export const ChannelJoinGroup: React.FC<ChannelJoinGroupProps> = ({
             {collapsedCopy.after}
           </span>
           <span className="text-xs text-[var(--slack-text-muted)]">
-            {formatShortTime(latestMsg.timeLabel)}
+            {joinTimeLabel(latestMsg)}
           </span>
           <span className="ml-1 inline-flex items-center gap-0.5 rounded-full border border-[var(--slack-border)] bg-[var(--slack-surface-bg)] px-2 py-0.2 text-[11px] font-medium text-[var(--slack-text-muted)] transition group-hover:border-[var(--slack-accent)]/40 group-hover:text-[var(--slack-text)]">
             {expanded ? (
@@ -286,7 +292,7 @@ export const ChannelJoinGroup: React.FC<ChannelJoinGroupProps> = ({
                     title={`${msg.date} ${msg.timeLabel}`}
                     className="shrink-0 text-[11px] text-[var(--slack-text-muted)] hover:underline"
                   >
-                    {formatShortTime(msg.timeLabel)}
+                    {joinTimeLabel(msg)}
                   </a>
                 </div>
 

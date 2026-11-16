@@ -57,6 +57,12 @@ export interface MessageFile {
   isImage: boolean;
 }
 
+export interface MessageAttachmentField {
+  title?: string;
+  value: string;
+  short?: boolean;
+}
+
 export interface MessageAttachment {
   isMsgUnfurl: boolean;
   authorName?: string;
@@ -71,6 +77,12 @@ export interface MessageAttachment {
   title?: string;
   titleLink?: string;
   text?: string;
+  pretext?: string;
+  footer?: string;
+  footerIcon?: string;
+  color?: string;
+  fallback?: string;
+  fields?: MessageAttachmentField[];
   imageUrl?: string;
   imageWidth?: number;
   imageHeight?: number;

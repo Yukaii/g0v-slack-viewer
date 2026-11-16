@@ -478,6 +478,9 @@ function parseMessageElement(
     } else {
       const img = cardEl.find('img.attachment-image');
       const titleLinkEl = cardEl.find('.card-subtitle a').first();
+      const rawFields = Array.isArray(rawAtt?.fields)
+        ? (rawAtt!.fields as Array<Record<string, unknown>>)
+        : [];
       attachments.push({
         isMsgUnfurl: false,
         serviceName:
@@ -487,6 +490,14 @@ function parseMessageElement(
         serviceIcon:
           String(rawAtt?.service_icon || '') ||
           cardEl.find('.card-title img.icon').attr('src') ||
+          undefined,
+        authorName:
+          String(rawAtt?.author_name || '') ||
+          cardEl.find('.card-title .user-name').text().trim() ||
+          undefined,
+        authorIcon:
+          String(rawAtt?.author_icon || '') ||
+          cardEl.find('.card-title img.avatar').attr('src') ||
           undefined,
         title:
           String(rawAtt?.title || '') || titleLinkEl.text().trim() || undefined,
@@ -498,6 +509,18 @@ function parseMessageElement(
           String(rawAtt?.text || '') ||
           cardEl.find('.card-text').text().trim() ||
           undefined,
+        pretext: rawAtt?.pretext ? String(rawAtt.pretext) : undefined,
+        footer: rawAtt?.footer ? String(rawAtt.footer) : undefined,
+        footerIcon: rawAtt?.footer_icon ? String(rawAtt.footer_icon) : undefined,
+        color: rawAtt?.color ? String(rawAtt.color) : undefined,
+        fallback: rawAtt?.fallback ? String(rawAtt.fallback) : undefined,
+        fields: rawFields.length
+          ? rawFields.map((field) => ({
+              title: field.title ? String(field.title) : undefined,
+              value: String(field.value ?? ''),
+              short: Boolean(field.short),
+            }))
+          : undefined,
         imageUrl:
           String(rawAtt?.image_url || '') || img.attr('src') || undefined,
         imageWidth: rawAtt?.image_width ? Number(rawAtt.image_width) : undefined,

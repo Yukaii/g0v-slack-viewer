@@ -50,6 +50,7 @@ interface MessageListProps {
   onNavigateChannel: (channelId: string, month?: string, ts?: string) => void;
   onPreviewFile: (file: MessageFile) => void;
   onScrollTopChange?: (channelId: string, scrollTop: number) => void;
+  onMarkRead?: (readAt: number) => void;
   onViewPrefsChange?: (
     channelId: string,
     prefs: {
@@ -103,6 +104,7 @@ export const MessageList: React.FC<MessageListProps> = ({
   onNavigateChannel,
   onPreviewFile,
   onScrollTopChange,
+  onMarkRead,
   onViewPrefsChange,
 }) => {
   const { locale, t } = useI18n();
@@ -143,6 +145,41 @@ export const MessageList: React.FC<MessageListProps> = ({
     [messages, highlightTs]
   );
 
+  // Newest timestamp in the feed (including thread replies) in epoch ms
+  const latestMessageTsMs = useMemo(() => {
+    let max = 0;
+    for (const m of messages) {
+      const own = Number(m.ts);
+      if (Number.isFinite(own) && own > max) max = own;
+      for (const r of m.replies) {
+        const reply = Number(r.ts);
+        if (Number.isFinite(reply) && reply > max) max = reply;
+      }
+    }
+    return Math.floor(max * 1000);
+  }, [messages]);
+
+  const markedReadTsRef = useRef(0);
+
+  // Only advance the read marker once the newest edge of the feed is on screen
+  const markReadIfAtLatestEdge = useCallback(() => {
+    if (!onMarkRead || !isLatestLoaded || !latestMessageTsMs) return;
+    if (markedReadTsRef.current >= latestMessageTsMs) return;
+    const el = containerRef.current;
+    if (!el) return;
+    const atLatestEdge =
+      sortOrder === 'asc'
+        ? el.scrollHeight - el.scrollTop - el.clientHeight <= 64
+        : el.scrollTop <= 64;
+    if (!atLatestEdge) return;
+    markedReadTsRef.current = latestMessageTsMs;
+    onMarkRead(latestMessageTsMs);
+  }, [onMarkRead, isLatestLoaded, latestMessageTsMs, sortOrder]);
+
+  useEffect(() => {
+    markReadIfAtLatestEdge();
+  }, [markReadIfAtLatestEdge]);
+
   // If the highlighted ts is a hidden thread reply, reveal hidden replies automatically
   useEffect(() => {
     if (!highlightTs) return;
@@ -174,36 +211,47 @@ export const MessageList: React.FC<MessageListProps> = ({
     );
   }, [messages, showHiddenReplies, localFilter, sortOrder]);
 
-  // Group by date, collapsing consecutive plain channel_join messages into join groups
+  // Group by date, collapsing consecutive plain channel_join messages into join
+  // groups. Join runs are allowed to span days so a quiet week of joins does not
+  // produce a separate collapsed row for every date.
   const dateGroups = useMemo(() => {
     const groups: Array<{ date: string; blocks: DateGroupBlock[] }> = [];
+    let currentGroup: { date: string; blocks: DateGroupBlock[] } | null = null;
+    let activeJoinGroup: Extract<DateGroupBlock, { type: 'joinGroup' }> | null =
+      null;
+
+    const ensureGroup = (date: string) => {
+      if (!currentGroup || currentGroup.date !== date) {
+        currentGroup = { date, blocks: [] };
+        groups.push(currentGroup);
+      }
+      return currentGroup;
+    };
+
     for (const msg of visibleMessages) {
-      let group = groups[groups.length - 1];
-      if (!group || group.date !== msg.date) {
-        group = { date: msg.date, blocks: [] };
-        groups.push(group);
+      if (isPlainChannelJoin(msg)) {
+        if (activeJoinGroup) {
+          activeJoinGroup.messages.push(msg);
+        } else {
+          const group = ensureGroup(msg.date);
+          activeJoinGroup = { type: 'joinGroup', messages: [msg] };
+          group.blocks.push(activeJoinGroup);
+        }
+        continue;
       }
 
-      if (isPlainChannelJoin(msg)) {
-        const lastBlock = group.blocks[group.blocks.length - 1];
-        if (lastBlock && lastBlock.type === 'joinGroup') {
-          lastBlock.messages.push(msg);
-        } else {
-          group.blocks.push({ type: 'joinGroup', messages: [msg] });
-        }
-      } else {
-        const prevBlock = group.blocks[group.blocks.length - 1];
-        const prevMsg =
-          prevBlock && prevBlock.type === 'message'
-            ? prevBlock.message
-            : undefined;
-        group.blocks.push({
-          type: 'message',
-          message: msg,
-          compact:
-            sortOrder === 'asc' && shouldGroupWithPrevious(prevMsg, msg),
-        });
-      }
+      activeJoinGroup = null;
+      const group = ensureGroup(msg.date);
+      const prevBlock = group.blocks[group.blocks.length - 1];
+      const prevMsg =
+        prevBlock && prevBlock.type === 'message'
+          ? prevBlock.message
+          : undefined;
+      group.blocks.push({
+        type: 'message',
+        message: msg,
+        compact: sortOrder === 'asc' && shouldGroupWithPrevious(prevMsg, msg),
+      });
     }
     return groups;
   }, [visibleMessages, sortOrder]);
@@ -248,12 +296,14 @@ export const MessageList: React.FC<MessageListProps> = ({
             onScrollTopChange?.(channelId, containerRef.current.scrollTop);
           }
           initialReadyRef.current = true;
+          markReadIfAtLatestEdge();
         }, 320);
       }, 80);
     } else if (initialScrollTop !== null && initialScrollTop !== undefined) {
       el.scrollTop = initialScrollTop;
       timerA = setTimeout(() => {
         initialReadyRef.current = true;
+        markReadIfAtLatestEdge();
       }, 120);
     } else {
       timerA = setTimeout(() => {
@@ -265,6 +315,7 @@ export const MessageList: React.FC<MessageListProps> = ({
         onScrollTopChange?.(channelId, el.scrollTop);
         timerB = setTimeout(() => {
           initialReadyRef.current = true;
+          markReadIfAtLatestEdge();
         }, 140);
       }, 25);
     }
@@ -372,14 +423,15 @@ export const MessageList: React.FC<MessageListProps> = ({
     // Near top -> load earlier (in asc) or newer (in desc)
     if (el.scrollTop < 180) {
       triggerTopLoad();
-      return;
+    } else {
+      // Near bottom -> load newer (in asc) or earlier (in desc)
+      const distToBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+      if (distToBottom < 180) {
+        triggerBottomLoad();
+      }
     }
 
-    // Near bottom -> load newer (in asc) or earlier (in desc)
-    const distToBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-    if (distToBottom < 180) {
-      triggerBottomLoad();
-    }
+    markReadIfAtLatestEdge();
   };
 
   // Also support wheel-up at top / wheel-down at bottom when a single month fits without a scrollbar

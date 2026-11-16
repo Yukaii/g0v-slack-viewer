@@ -12,6 +12,7 @@ import { useI18n } from '../i18n/I18nContext';
 import type { ArchiveMessage, MessageFile } from '../types';
 import { formatFileSize, formatShortTime } from '../utils/format';
 import { RichContent } from './RichContent';
+import { SlackText, hasSlackLinkMarkup } from './SlackText';
 
 interface MessageItemProps {
   message: ArchiveMessage;
@@ -314,6 +315,15 @@ export const MessageItem: React.FC<MessageItemProps> = ({
               ) : (
                 <div
                   key={idx}
+                  style={
+                    att.color
+                      ? {
+                          borderLeftColor: att.color.startsWith('#')
+                            ? att.color
+                            : `#${att.color}`,
+                        }
+                      : undefined
+                  }
                   className="flex w-full max-w-2xl items-start justify-between gap-2.5 overflow-hidden rounded-r-md border-l-4 border-[#d1d2d3] dark:border-[#4b4d52] bg-[var(--slack-surface-bg)] px-3 py-2 sm:gap-3 sm:px-3.5 sm:py-2.5"
                 >
                   <div className="min-w-0 flex-1 break-words [overflow-wrap:anywhere]">
@@ -329,26 +339,78 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                         <span>{att.serviceName}</span>
                       </div>
                     )}
+                    {(att.authorName || att.authorIcon) && (
+                      <div className="mb-1 flex items-center gap-1.5 text-xs">
+                        {att.authorIcon && (
+                          <img
+                            src={att.authorIcon}
+                            alt=""
+                            className="h-4 w-4 rounded-xs object-contain"
+                          />
+                        )}
+                        {att.authorName && (
+                          <span className="font-semibold text-[var(--slack-text)]">
+                            {att.authorName}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    {att.pretext && (
+                      <div className="mb-1 whitespace-pre-wrap text-xs text-[var(--slack-text-muted)]">
+                        <SlackText text={att.pretext} />
+                      </div>
+                    )}
                     {att.title && (
                       <div className="text-sm font-semibold">
-                        {att.titleLink ? (
+                        {att.titleLink && !hasSlackLinkMarkup(att.title) ? (
                           <a
                             href={att.titleLink}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-[var(--slack-link)] hover:underline"
                           >
-                            {att.title}
+                            <SlackText text={att.title} />
                           </a>
                         ) : (
-                          att.title
+                          <SlackText text={att.title} />
                         )}
                       </div>
                     )}
                     {att.text && (
-                      <p className="mt-1 line-clamp-3 text-xs leading-relaxed text-[var(--slack-text-muted)]">
-                        {att.text}
-                      </p>
+                      <div className="mt-1 whitespace-pre-wrap text-xs leading-relaxed text-[var(--slack-text-muted)]">
+                        <SlackText text={att.text} />
+                      </div>
+                    )}
+                    {att.fields && att.fields.length > 0 && (
+                      <div className="mt-2 grid grid-cols-1 gap-x-4 gap-y-1.5 sm:grid-cols-2">
+                        {att.fields.map((field, fieldIdx) => (
+                          <div
+                            key={`${field.title || 'field'}-${fieldIdx}`}
+                            className={field.short ? '' : 'sm:col-span-2'}
+                          >
+                            {field.title && (
+                              <div className="text-[11px] font-semibold tracking-wide text-[var(--slack-text-muted)] uppercase">
+                                {field.title}
+                              </div>
+                            )}
+                            <div className="whitespace-pre-wrap text-xs text-[var(--slack-text)]">
+                              <SlackText text={field.value} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {att.footer && (
+                      <div className="mt-2 flex items-center gap-1.5 text-[11px] text-[var(--slack-text-muted)]">
+                        {att.footerIcon && (
+                          <img
+                            src={att.footerIcon}
+                            alt=""
+                            className="h-3.5 w-3.5 rounded-xs object-contain"
+                          />
+                        )}
+                        <SlackText text={att.footer} />
+                      </div>
                     )}
                   </div>
                   {att.imageUrl && (

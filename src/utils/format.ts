@@ -2,24 +2,43 @@ import type { Locale } from './storage';
 
 export function formatDateDivider(
   dateStr: string,
-  locale: Locale = 'zh-TW'
+  locale: Locale = 'zh-TW',
+  now: Date = new Date()
 ): string {
   // dateStr is YYYY-MM-DD
   const parts = dateStr.split('-').map(Number);
   if (parts.length !== 3 || parts.some(Number.isNaN)) return dateStr;
   const [year, month, day] = parts;
   const dt = new Date(year, month - 1, day);
+  dt.setHours(0, 0, 0, 0);
+  const today = new Date(now);
+  today.setHours(0, 0, 0, 0);
+  const daysAgo = Math.round((today.getTime() - dt.getTime()) / 86_400_000);
+  const isCurrentYear = year === today.getFullYear();
+
   if (locale === 'zh-TW') {
+    if (daysAgo === 0) return '今天';
+    if (daysAgo === 1) return '昨天';
     const weekday = dt.toLocaleDateString('zh-TW', { weekday: 'long' });
-    return `${year}年${month}月${day}日 ${weekday}`;
+    return isCurrentYear
+      ? `${month}月${day}日 ${weekday}`
+      : `${year}年${month}月${day}日 ${weekday}`;
   }
   if (locale === 'ja') {
+    if (daysAgo === 0) return '今日';
+    if (daysAgo === 1) return '昨日';
     const weekday = dt.toLocaleDateString('ja-JP', { weekday: 'short' });
-    return `${year}年${month}月${day}日 (${weekday})`;
+    return isCurrentYear
+      ? `${month}月${day}日 (${weekday})`
+      : `${year}年${month}月${day}日 (${weekday})`;
   }
+  if (daysAgo === 0) return 'Today';
+  if (daysAgo === 1) return 'Yesterday';
   const weekday = dt.toLocaleDateString('en-US', { weekday: 'long' });
   const monthName = dt.toLocaleDateString('en-US', { month: 'long' });
-  return `${weekday}, ${monthName} ${day}, ${year}`;
+  return isCurrentYear
+    ? `${weekday}, ${monthName} ${day}`
+    : `${weekday}, ${monthName} ${day}, ${year}`;
 }
 
 const EN_MONTHS = [

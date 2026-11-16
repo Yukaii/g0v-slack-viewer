@@ -16,14 +16,19 @@ import type {
   MessageFile,
 } from './types';
 import {
+  isChannelUnread,
   loadDesktopSidebarOpen,
+  loadReadState,
   loadRecentChannels,
   loadStarredChannels,
   loadTheme,
+  markChannelRead,
   recordRecentChannel,
   saveDesktopSidebarOpen,
+  saveReadState,
   saveStarredChannels,
   saveTheme,
+  type ChannelReadState,
 } from './utils/storage';
 import {
   dedupeAndMergeMessages,
@@ -138,6 +143,9 @@ export const App: React.FC = () => {
   );
   const [recentIds, setRecentIds] = useState<string[]>(() =>
     loadRecentChannels()
+  );
+  const [readState, setReadState] = useState<ChannelReadState | null>(() =>
+    loadReadState()
   );
 
   const [routeState, setRouteState] = useState<AppRouteState>(initialRoute);
@@ -259,6 +267,27 @@ export const App: React.FC = () => {
       .then(setChannels)
       .catch((err) => console.warn('Channels load failed:', err));
   }, []);
+
+  // Treat channels we have never tracked as read at their current last post,
+  // so only archive updates after the baseline surface as unread
+  useEffect(() => {
+    if (channels.length === 0) return;
+    setReadState((prev) => {
+      const base = prev ?? {};
+      let next: ChannelReadState | null = null;
+      for (const ch of channels) {
+        if (base[ch.id] === undefined && ch.lastPostedAt) {
+          next = next ?? { ...base };
+          next[ch.id] = ch.lastPostedAt;
+        }
+      }
+      return next ?? prev;
+    });
+  }, [channels]);
+
+  useEffect(() => {
+    if (readState) saveReadState(readState);
+  }, [readState]);
 
   // Sync browser back/forward
   useEffect(() => {
@@ -591,6 +620,26 @@ export const App: React.FC = () => {
     [channels, activeChannelId]
   );
 
+  const unreadChannelIds = useMemo(() => {
+    const ids = new Set<string>();
+    if (!readState) return ids;
+    for (const ch of channels) {
+      if (isChannelUnread(ch.lastPostedAt, readState[ch.id])) ids.add(ch.id);
+    }
+    return ids;
+  }, [channels, readState]);
+
+  // Called once the newest loaded message is actually visible in the feed
+  const handleMarkRead = useCallback(
+    (readAt: number) => {
+      setReadState((prev) => {
+        const base = prev ?? {};
+        return markChannelRead(base, activeChannelId, readAt) ?? prev;
+      });
+    },
+    [activeChannelId]
+  );
+
   const handleOpenThread = useCallback((msg: ArchiveMessage) => {
     setChannelInfoTab(null);
     setActiveThread(msg);
@@ -697,6 +746,7 @@ export const App: React.FC = () => {
           viewMode={viewMode}
           starredIds={starredIds}
           recentIds={recentIds}
+          unreadIds={unreadChannelIds}
           desktopOpen={desktopSidebarOpen}
           mobileOpen={mobileSidebarOpen}
           onCloseMobile={closeMobileSidebar}
@@ -715,6 +765,7 @@ export const App: React.FC = () => {
               channels={channels}
               stats={stats}
               starredIds={starredIds}
+              unreadIds={unreadChannelIds}
               desktopSidebarOpen={desktopSidebarOpen}
               onToggleDesktopSidebar={toggleDesktopSidebar}
               onSelectChannel={selectChannelRoot}
@@ -800,6 +851,7 @@ export const App: React.FC = () => {
                     onPreviewFile={setPreviewFile}
                     onScrollTopChange={handleScrollTopChange}
                     onViewPrefsChange={handleViewPrefsChange}
+                    onMarkRead={handleMarkRead}
                   />
                 </div>
               ) : null}

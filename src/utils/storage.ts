@@ -7,6 +7,15 @@ const THEME_KEY = 'g0v_slack_theme';
 const RECENT_KEY = 'g0v_slack_recent_channels';
 const LOCALE_KEY = 'g0v_slack_locale';
 const SIDEBAR_KEY = 'g0v_slack_sidebar_open';
+const READ_STATE_KEY = 'g0v_slack_read_state';
+
+/**
+ * Per-channel read markers, keyed by channel ID and stored as the archive
+ * timestamp (epoch milliseconds) of the newest message the user has read.
+ * `null` means no read state has been saved yet, which lets the app seed a
+ * baseline the first time it sees the workspace.
+ */
+export type ChannelReadState = Record<string, number>;
 
 const DEFAULT_STARRED = [
   'C02G2SXKX', // #general
@@ -120,4 +129,55 @@ export function recordRecentChannel(id: string): string[] {
     // ignore
   }
   return next;
+}
+
+export function loadReadState(): ChannelReadState | null {
+  try {
+    const raw = localStorage.getItem(READ_STATE_KEY);
+    if (raw === null) return null;
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return null;
+    }
+    const state: ChannelReadState = {};
+    for (const [channelId, value] of Object.entries(
+      parsed as Record<string, unknown>
+    )) {
+      if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
+        state[channelId] = value;
+      }
+    }
+    return state;
+  } catch {
+    return null;
+  }
+}
+
+export function saveReadState(state: ChannelReadState): void {
+  try {
+    localStorage.setItem(READ_STATE_KEY, JSON.stringify(state));
+  } catch {
+    // ignore storage quota errors
+  }
+}
+
+/** Returns a new state when the read marker moves forward, otherwise null. */
+export function markChannelRead(
+  state: ChannelReadState,
+  channelId: string,
+  readAt: number
+): ChannelReadState | null {
+  if (!Number.isFinite(readAt) || readAt <= 0) return null;
+  if ((state[channelId] ?? 0) >= readAt) return null;
+  return { ...state, [channelId]: readAt };
+}
+
+export function isChannelUnread(
+  lastPostedAt: number | null | undefined,
+  readAt: number | undefined
+): boolean {
+  // Channels without a stored marker are treated as read, so a fresh visitor
+  // does not see the whole workspace marked unread.
+  if (!lastPostedAt || readAt === undefined) return false;
+  return lastPostedAt > readAt;
 }

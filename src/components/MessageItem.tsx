@@ -11,6 +11,7 @@ import {
 import { useI18n } from '../i18n/I18nContext';
 import type { ArchiveMessage, MessageFile } from '../types';
 import { formatFileSize, formatShortTime } from '../utils/format';
+import { preloadImage } from '../utils/image';
 import { RichContent } from './RichContent';
 import { SlackText, hasSlackLinkMarkup } from './SlackText';
 
@@ -219,6 +220,13 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                   <button
                     type="button"
                     onClick={() => onPreviewFile?.(file)}
+                    onPointerEnter={() =>
+                      preloadImage(file.previewUrl || file.fullUrl)
+                    }
+                    onPointerDown={() =>
+                      preloadImage(file.previewUrl || file.fullUrl)
+                    }
+                    onFocus={() => preloadImage(file.previewUrl || file.fullUrl)}
                     className="group/img block w-full max-w-full overflow-hidden rounded-lg border border-[var(--slack-border)] bg-[var(--slack-surface-bg)] text-left transition hover:border-[var(--slack-accent)] sm:w-auto"
                   >
                     <img

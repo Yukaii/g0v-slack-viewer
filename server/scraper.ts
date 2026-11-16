@@ -401,6 +401,14 @@ function parseMessageElement(
     const thumbCandidate = String(
       rawFile.thumb_720 || rawFile.thumb_480 || rawFile.thumb_360 || ''
     );
+    const previewCandidate = String(
+      rawFile.thumb_1024 ||
+        rawFile.thumb_960 ||
+        rawFile.thumb_800 ||
+        rawFile.thumb_720 ||
+        thumbCandidate ||
+        ''
+    );
     const fullCandidate = String(
       rawFile.url_private || rawFile.thumb_1024 || thumbCandidate || ''
     );
@@ -416,6 +424,7 @@ function parseMessageElement(
       filetype: rawFile.filetype ? String(rawFile.filetype) : undefined,
       size: typeof rawFile.size === 'number' ? rawFile.size : undefined,
       thumbUrl: rewriteFileUrl(imgSrc || thumbCandidate),
+      previewUrl: rewriteFileUrl(previewCandidate || imgSrc),
       fullUrl: rewriteFileUrl(fullCandidate || imgSrc),
       isImage,
     });
@@ -427,6 +436,13 @@ function parseMessageElement(
       const thumbCandidate = String(
         rawFile.thumb_720 || rawFile.thumb_360 || rawFile.url_private || ''
       );
+      const previewCandidate = String(
+        rawFile.thumb_1024 ||
+          rawFile.thumb_960 ||
+          rawFile.thumb_800 ||
+          thumbCandidate ||
+          ''
+      );
       if (!thumbCandidate) continue;
       const mimetype = rawFile.mimetype ? String(rawFile.mimetype) : undefined;
       files.push({
@@ -437,6 +453,7 @@ function parseMessageElement(
         filetype: rawFile.filetype ? String(rawFile.filetype) : undefined,
         size: typeof rawFile.size === 'number' ? rawFile.size : undefined,
         thumbUrl: rewriteFileUrl(thumbCandidate),
+        previewUrl: rewriteFileUrl(previewCandidate),
         fullUrl: rewriteFileUrl(
           String(rawFile.url_private || thumbCandidate)
         ),

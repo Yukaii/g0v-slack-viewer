@@ -53,6 +53,7 @@ export interface MessageFile {
   filetype?: string;
   size?: number;
   thumbUrl: string;
+  previewUrl?: string;
   fullUrl?: string;
   isImage: boolean;
 }

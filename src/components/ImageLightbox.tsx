@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { ExternalLink, X } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { ExternalLink, Loader2, X } from 'lucide-react';
 import { useI18n } from '../i18n/I18nContext';
 import type { MessageFile } from '../types';
 import { formatFileSize } from '../utils/format';
@@ -14,6 +14,12 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
   onClose,
 }) => {
   const { t } = useI18n();
+  const imageSrc = file?.previewUrl || file?.fullUrl || file?.thumbUrl || '';
+  const fullSrc = file?.fullUrl || imageSrc;
+  const placeholderSrc =
+    file?.thumbUrl && file.thumbUrl !== imageSrc ? file.thumbUrl : '';
+  const [loadedSrc, setLoadedSrc] = useState<string | null>(null);
+  const loaded = imageSrc !== '' && loadedSrc === imageSrc;
 
   useEffect(() => {
     if (!file) return;
@@ -25,8 +31,6 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
   }, [file, onClose]);
 
   if (!file) return null;
-
-  const src = file.fullUrl || file.thumbUrl;
 
   return (
     <div
@@ -50,7 +54,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
           </div>
           <div className="flex items-center gap-2">
             <a
-              href={src}
+              href={fullSrc}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-medium text-white/80 hover:bg-white/10 hover:text-white"
@@ -68,12 +72,32 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
             </button>
           </div>
         </div>
-        <div className="flex items-center justify-center overflow-auto p-4">
+        <div className="relative grid min-h-[160px] min-w-[160px] place-items-center overflow-auto p-4">
+          {placeholderSrc && (
+            <img
+              src={placeholderSrc}
+              alt=""
+              aria-hidden="true"
+              className={`col-start-1 row-start-1 max-h-[76vh] max-w-full rounded object-contain transition-opacity duration-150 ${
+                loaded ? 'opacity-0' : 'opacity-100'
+              }`}
+            />
+          )}
           <img
-            src={src}
+            src={imageSrc}
             alt={file.title}
-            className="max-h-[76vh] max-w-full rounded object-contain"
+            decoding="async"
+            onLoad={() => setLoadedSrc(imageSrc)}
+            onError={() => setLoadedSrc(imageSrc)}
+            className={`col-start-1 row-start-1 max-h-[76vh] max-w-full rounded object-contain transition-opacity duration-150 ${
+              loaded ? 'opacity-100' : 'opacity-0'
+            }`}
           />
+          {!loaded && (
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+              <Loader2 className="h-6 w-6 animate-spin text-white/70" />
+            </div>
+          )}
         </div>
       </div>
     </div>

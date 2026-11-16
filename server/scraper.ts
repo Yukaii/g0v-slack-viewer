@@ -235,6 +235,19 @@ function messagesNeedChannelResolution(messages: ArchiveMessage[]): boolean {
   );
 }
 
+// The user cache fills up while the whole month is parsed, so re-resolve
+// reaction authors at the end to pick up people who only posted later in the page.
+function resolveReactionUserNames(messages: ArchiveMessage[]): void {
+  for (const message of messages) {
+    for (const reaction of message.reactions) {
+      if (reaction.users.length === 0) continue;
+      reaction.userNames = reaction.users.map(
+        (userId) => userCache.get(userId)?.displayName || userId
+      );
+    }
+  }
+}
+
 function resolveMessagesChannelRefs(
   messages: ArchiveMessage[],
   channelMap: Map<string, string>
@@ -565,9 +578,9 @@ function parseMessageElement(
     const users = Array.isArray(rawR?.users)
       ? (rawR.users as string[])
       : [];
-    const userNames = users
-      .map((uid) => userCache.get(uid)?.displayName || uid)
-      .slice(0, 12);
+    const userNames = users.map(
+      (uid) => userCache.get(uid)?.displayName || uid
+    );
     reactions.push({
       name: String(rawR?.name || ''),
       emojiHtml,
@@ -728,6 +741,8 @@ export async function getChannelMessages(
       }
     });
 
+  resolveReactionUserNames(messages);
+
   if (messagesNeedChannelResolution(messages)) {
     const channelMap = await getChannelNameMap();
     if (channelMap) {
@@ -796,6 +811,7 @@ export async function searchMessages(query: string): Promise<SearchResponse> {
   });
 
   const searchMessagesList = results.map((r) => r.message);
+  resolveReactionUserNames(searchMessagesList);
   if (messagesNeedChannelResolution(searchMessagesList)) {
     const channelMap = await getChannelNameMap();
     if (channelMap) {

@@ -131,6 +131,8 @@ export interface Translations {
     forwardedMessage: string;
     replyCount: (count: number) => string;
     lastReply: (time: string) => string;
+    reactionViewWho: string;
+    reactionCount: (count: number) => string;
   };
   channelJoin: {
     joinedSingle: (userName: string, channelName: string) => {
@@ -345,6 +347,8 @@ export const zhTW: Translations = {
     forwardedMessage: '轉寄的訊息',
     replyCount: (count) => `${count} 則回覆`,
     lastReply: (time) => `最後回覆 ${time}`,
+    reactionViewWho: '查看誰回應',
+    reactionCount: (count) => `${count} 個回應`,
   },
   channelJoin: {
     joinedSingle: (userName, channelName) => ({
@@ -572,6 +576,9 @@ export const en: Translations = {
     forwardedMessage: 'Forwarded message',
     replyCount: (count) => `${count} ${count === 1 ? 'reply' : 'replies'}`,
     lastReply: (time) => `Last reply ${time}`,
+    reactionViewWho: 'View who reacted',
+    reactionCount: (count) =>
+      `${count} ${count === 1 ? 'reaction' : 'reactions'}`,
   },
   channelJoin: {
     joinedSingle: (userName, channelName) => ({
@@ -799,6 +806,8 @@ export const ja: Translations = {
     forwardedMessage: '転送されたメッセージ',
     replyCount: (count) => `${count} 件の返信`,
     lastReply: (time) => `最終返信 ${time}`,
+    reactionViewWho: 'リアクションした人を表示',
+    reactionCount: (count) => `${count} 件のリアクション`,
   },
   channelJoin: {
     joinedSingle: (userName, channelName) => ({

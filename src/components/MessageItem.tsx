@@ -14,6 +14,7 @@ import { formatFileSize, formatShortTime } from '../utils/format';
 import { preloadImage } from '../utils/image';
 import { RichContent } from './RichContent';
 import { SlackText, hasSlackLinkMarkup } from './SlackText';
+import { ReactionChip } from './ReactionChip';
 
 interface MessageItemProps {
   message: ArchiveMessage;
@@ -439,25 +440,10 @@ export const MessageItem: React.FC<MessageItemProps> = ({
         {message.reactions.length > 0 && (
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             {message.reactions.map((reaction, idx) => (
-              <span
+              <ReactionChip
                 key={`${reaction.name}-${idx}`}
-                title={
-                  reaction.userNames?.length
-                    ? `:${reaction.name}: — ${reaction.userNames.join(', ')}${
-                        reaction.users.length > reaction.userNames.length
-                          ? ` +${reaction.users.length - reaction.userNames.length}`
-                          : ''
-                      }`
-                    : `:${reaction.name}:`
-                }
-                className="inline-flex items-center gap-1 rounded-full border border-[var(--slack-border)] bg-[var(--slack-badge-bg)] px-2 py-0.5 text-xs font-medium text-[var(--slack-text)]"
-              >
-                <span
-                  className="reaction-emoji inline-flex items-center"
-                  dangerouslySetInnerHTML={{ __html: reaction.emojiHtml }}
-                />
-                <span>{reaction.count}</span>
-              </span>
+                reaction={reaction}
+              />
             ))}
           </div>
         )}

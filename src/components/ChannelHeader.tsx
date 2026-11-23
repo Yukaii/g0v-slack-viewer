@@ -29,6 +29,7 @@ interface ChannelHeaderProps {
   isStarred: boolean;
   infoTab: ChannelInfoTab | null;
   desktopSidebarOpen?: boolean;
+  sidebarToggleShortcut?: string;
   onToggleDesktopSidebar?: () => void;
   onToggleStar: () => void;
   onToggleInfo: () => void;
@@ -60,6 +61,7 @@ export const ChannelHeader: React.FC<ChannelHeaderProps> = ({
   isStarred,
   infoTab,
   desktopSidebarOpen = true,
+  sidebarToggleShortcut,
   onToggleDesktopSidebar,
   onToggleStar,
   onToggleInfo,
@@ -106,9 +108,15 @@ export const ChannelHeader: React.FC<ChannelHeaderProps> = ({
               type="button"
               onClick={onToggleDesktopSidebar}
               title={
-                desktopSidebarOpen
-                  ? t.channelHeader.hideSidebar
-                  : t.channelHeader.showSidebar
+                sidebarToggleShortcut
+                  ? `${
+                      desktopSidebarOpen
+                        ? t.channelHeader.hideSidebar
+                        : t.channelHeader.showSidebar
+                    } (${sidebarToggleShortcut})`
+                  : desktopSidebarOpen
+                    ? t.channelHeader.hideSidebar
+                    : t.channelHeader.showSidebar
               }
               aria-label={
                 desktopSidebarOpen

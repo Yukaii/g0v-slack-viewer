@@ -1,12 +1,24 @@
 import type { AppThemeId } from './themes';
+import {
+  DEFAULT_SHORTCUTS,
+  SHORTCUT_ACTION_ORDER,
+  isValidKeyBinding,
+  type ShortcutMap,
+} from './shortcuts';
 
 export type Locale = 'zh-TW' | 'en' | 'ja';
+
+export const SIDEBAR_DEFAULT_WIDTH = 256;
+export const SIDEBAR_MIN_WIDTH = 200;
+export const SIDEBAR_MAX_WIDTH = 440;
 
 const STARRED_KEY = 'g0v_slack_starred_channels';
 const THEME_KEY = 'g0v_slack_theme';
 const RECENT_KEY = 'g0v_slack_recent_channels';
 const LOCALE_KEY = 'g0v_slack_locale';
 const SIDEBAR_KEY = 'g0v_slack_sidebar_open';
+const SIDEBAR_WIDTH_KEY = 'g0v_slack_sidebar_width';
+const SHORTCUTS_KEY = 'g0v_slack_shortcuts';
 const READ_STATE_KEY = 'g0v_slack_read_state';
 
 /**
@@ -38,6 +50,69 @@ export function loadDesktopSidebarOpen(): boolean {
 export function saveDesktopSidebarOpen(open: boolean): void {
   try {
     localStorage.setItem(SIDEBAR_KEY, open ? '1' : '0');
+  } catch {
+    // ignore
+  }
+}
+
+export function clampSidebarWidth(width: number): number {
+  if (!Number.isFinite(width)) return SIDEBAR_DEFAULT_WIDTH;
+  return Math.round(
+    Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, width))
+  );
+}
+
+export function loadSidebarWidth(): number {
+  try {
+    const raw = localStorage.getItem(SIDEBAR_WIDTH_KEY);
+    if (!raw) return SIDEBAR_DEFAULT_WIDTH;
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed)) return SIDEBAR_DEFAULT_WIDTH;
+    return clampSidebarWidth(parsed);
+  } catch {
+    return SIDEBAR_DEFAULT_WIDTH;
+  }
+}
+
+export function saveSidebarWidth(width: number): void {
+  try {
+    localStorage.setItem(SIDEBAR_WIDTH_KEY, String(clampSidebarWidth(width)));
+  } catch {
+    // ignore
+  }
+}
+
+export function loadShortcuts(): ShortcutMap {
+  const result: ShortcutMap = { ...DEFAULT_SHORTCUTS };
+  try {
+    const raw = localStorage.getItem(SHORTCUTS_KEY);
+    if (!raw) return result;
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return result;
+    }
+    const record = parsed as Record<string, unknown>;
+    for (const action of SHORTCUT_ACTION_ORDER) {
+      const candidate = record[action];
+      if (isValidKeyBinding(candidate)) {
+        result[action] = {
+          mod: candidate.mod,
+          ctrl: Boolean(candidate.ctrl),
+          shift: candidate.shift,
+          alt: candidate.alt,
+          key: candidate.key.toLowerCase(),
+        };
+      }
+    }
+    return result;
+  } catch {
+    return result;
+  }
+}
+
+export function saveShortcuts(shortcuts: ShortcutMap): void {
+  try {
+    localStorage.setItem(SHORTCUTS_KEY, JSON.stringify(shortcuts));
   } catch {
     // ignore
   }

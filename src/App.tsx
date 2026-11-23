@@ -3,6 +3,7 @@ import {
   AlertCircle,
   Archive,
   ExternalLink,
+  Keyboard,
   Loader2,
   RefreshCw,
   Search,
@@ -16,20 +17,34 @@ import type {
   MessageFile,
 } from './types';
 import {
+  SIDEBAR_DEFAULT_WIDTH,
+  clampSidebarWidth,
   isChannelUnread,
   loadDesktopSidebarOpen,
   loadReadState,
   loadRecentChannels,
+  loadShortcuts,
+  loadSidebarWidth,
   loadStarredChannels,
   loadTheme,
   markChannelRead,
   recordRecentChannel,
   saveDesktopSidebarOpen,
   saveReadState,
+  saveShortcuts,
+  saveSidebarWidth,
   saveStarredChannels,
   saveTheme,
   type ChannelReadState,
 } from './utils/storage';
+import {
+  DEFAULT_SHORTCUTS,
+  formatKeyBinding,
+  matchesKeyBinding,
+  type KeyBinding,
+  type ShortcutActionId,
+  type ShortcutMap,
+} from './utils/shortcuts';
 import {
   dedupeAndMergeMessages,
   messageOrReplyMatchesTs,
@@ -44,11 +59,11 @@ import { ChannelInfoPanel } from './components/ChannelInfoPanel';
 import { ChannelDirectory } from './components/ChannelDirectory';
 import { ChannelMapProvider } from './context/ChannelMapContext';
 import { CommandPalette, type PaletteMode } from './components/CommandPalette';
-import { getCommandShortcutLabel } from './utils/platform';
 import { ImageLightbox } from './components/ImageLightbox';
 import { G0vLogo } from './components/G0vLogo';
 import { LanguagePicker } from './components/LanguagePicker';
 import { ThemePicker } from './components/ThemePicker';
+import { PreferencesModal } from './components/PreferencesModal';
 import { APP_THEMES, getThemeMeta, type AppThemeId } from './utils/themes';
 
 const DEFAULT_CHANNEL_ID = 'C02G2SXKX'; // #general
@@ -184,12 +199,33 @@ export const App: React.FC = () => {
   );
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteMode, setPaletteMode] = useState<PaletteMode>('switcher');
-  const shortcutLabel = useMemo(() => getCommandShortcutLabel(), []);
+  const [preferencesOpen, setPreferencesOpen] = useState(false);
+  const [shortcuts, setShortcuts] = useState<ShortcutMap>(() => loadShortcuts());
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [desktopSidebarOpen, setDesktopSidebarOpen] = useState<boolean>(() =>
     loadDesktopSidebarOpen()
   );
+  const [sidebarWidth, setSidebarWidth] = useState<number>(() =>
+    loadSidebarWidth()
+  );
   const [previewFile, setPreviewFile] = useState<MessageFile | null>(null);
+
+  const quickSwitcherLabel = useMemo(
+    () => formatKeyBinding(shortcuts.quickSwitcher),
+    [shortcuts.quickSwitcher]
+  );
+  const toggleSidebarLabel = useMemo(
+    () => formatKeyBinding(shortcuts.toggleSidebar),
+    [shortcuts.toggleSidebar]
+  );
+  const openDirectoryLabel = useMemo(
+    () => formatKeyBinding(shortcuts.openDirectory),
+    [shortcuts.openDirectory]
+  );
+  const toggleChannelInfoLabel = useMemo(
+    () => formatKeyBinding(shortcuts.toggleChannelInfo),
+    [shortcuts.toggleChannelInfo]
+  );
 
   const toggleDesktopSidebar = useCallback(() => {
     setDesktopSidebarOpen((prev) => {
@@ -197,6 +233,44 @@ export const App: React.FC = () => {
       saveDesktopSidebarOpen(next);
       return next;
     });
+  }, []);
+
+  const handleResizeSidebarWidth = useCallback((nextWidth: number) => {
+    const clamped = clampSidebarWidth(nextWidth);
+    setSidebarWidth(clamped);
+    saveSidebarWidth(clamped);
+  }, []);
+
+  const handleResetSidebarWidth = useCallback(() => {
+    setSidebarWidth(SIDEBAR_DEFAULT_WIDTH);
+    saveSidebarWidth(SIDEBAR_DEFAULT_WIDTH);
+  }, []);
+
+  const handleUpdateShortcut = useCallback(
+    (action: ShortcutActionId, binding: KeyBinding) => {
+      setShortcuts((prev) => {
+        const next = { ...prev, [action]: binding };
+        saveShortcuts(next);
+        return next;
+      });
+    },
+    []
+  );
+
+  const handleResetShortcut = useCallback((action: ShortcutActionId) => {
+    setShortcuts((prev) => {
+      const next = { ...prev, [action]: DEFAULT_SHORTCUTS[action] };
+      saveShortcuts(next);
+      return next;
+    });
+  }, []);
+
+  const handleResetAllPreferences = useCallback(() => {
+    const defaults = { ...DEFAULT_SHORTCUTS };
+    setShortcuts(defaults);
+    saveShortcuts(defaults);
+    setSidebarWidth(SIDEBAR_DEFAULT_WIDTH);
+    saveSidebarWidth(SIDEBAR_DEFAULT_WIDTH);
   }, []);
 
   const cycleTheme = useCallback(() => {
@@ -224,28 +298,49 @@ export const App: React.FC = () => {
     setPaletteOpen(true);
   }, []);
 
-  // Global Slack-like keyboard shortcuts (Cmd/Ctrl+K Quick Switcher, Cmd/Ctrl+Shift+K Directory, Cmd/Ctrl+\ Sidebar)
+  // Global customizable keyboard shortcuts
   useEffect(() => {
+    if (preferencesOpen) return;
+
     const onKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === '\\') {
+      if (matchesKeyBinding(e, shortcuts.toggleSidebar)) {
         e.preventDefault();
         toggleDesktopSidebar();
         return;
       }
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+
+      if (matchesKeyBinding(e, shortcuts.openDirectory)) {
         e.preventDefault();
-        if (e.shiftKey) {
-          setPaletteOpen(false);
-          setRouteState((prev) => ({
-            ...prev,
-            viewMode: 'directory',
-            seq: prev.seq + 1,
-          }));
-          setActiveThread(null);
-          setChannelInfoTab(null);
-          window.history.pushState(null, '', '/channels');
-          return;
-        }
+        setPaletteOpen(false);
+        setRouteState((prev) => ({
+          ...prev,
+          viewMode: 'directory',
+          seq: prev.seq + 1,
+        }));
+        setActiveThread(null);
+        setChannelInfoTab(null);
+        window.history.pushState(null, '', '/channels');
+        return;
+      }
+
+      if (matchesKeyBinding(e, shortcuts.searchMessages)) {
+        e.preventDefault();
+        setPaletteOpen((prevOpen) => {
+          if (!prevOpen) {
+            setPaletteMode('search');
+            return true;
+          }
+          if (paletteMode !== 'search') {
+            setPaletteMode('search');
+            return true;
+          }
+          return false;
+        });
+        return;
+      }
+
+      if (matchesKeyBinding(e, shortcuts.quickSwitcher)) {
+        e.preventDefault();
         setPaletteOpen((prevOpen) => {
           if (!prevOpen) {
             setPaletteMode('switcher');
@@ -257,11 +352,21 @@ export const App: React.FC = () => {
           }
           return false;
         });
+        return;
+      }
+
+      if (
+        viewMode === 'channel' &&
+        matchesKeyBinding(e, shortcuts.toggleChannelInfo)
+      ) {
+        e.preventDefault();
+        setActiveThread(null);
+        setChannelInfoTab((prev) => (prev === 'about' ? null : 'about'));
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [paletteMode, toggleDesktopSidebar]);
+  }, [paletteMode, preferencesOpen, shortcuts, toggleDesktopSidebar, viewMode]);
 
   // Load workspace stats & channels on mount
   useEffect(() => {
@@ -711,12 +816,21 @@ export const App: React.FC = () => {
             <span className="hidden truncate sm:inline">{t.topBar.jumpOrSearchLong}</span>
           </span>
           <kbd className="hidden rounded bg-black/25 px-1.5 py-0.2 text-[10px] font-medium text-white/80 sm:inline">
-            {shortcutLabel}
+            {quickSwitcherLabel}
           </kbd>
         </button>
 
         {/* Right utility controls */}
         <div className="flex shrink-0 items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setPreferencesOpen(true)}
+            title={t.topBar.customizeTitle}
+            aria-label={t.topBar.customizeTitle}
+            className="inline-flex h-6 items-center justify-center rounded-md border border-white/15 bg-white/10 px-2 text-xs font-medium text-white/90 transition hover:bg-white/20"
+          >
+            <Keyboard className="h-3.5 w-3.5 opacity-90" />
+          </button>
           <LanguagePicker />
           <ThemePicker theme={theme} onSelectTheme={setTheme} />
           <a
@@ -758,6 +872,10 @@ export const App: React.FC = () => {
           recentIds={recentIds}
           unreadIds={unreadChannelIds}
           desktopOpen={desktopSidebarOpen}
+          width={sidebarWidth}
+          onResizeWidth={handleResizeSidebarWidth}
+          onResetWidth={handleResetSidebarWidth}
+          quickSwitcherShortcut={quickSwitcherLabel}
           mobileOpen={mobileSidebarOpen}
           onCloseMobile={closeMobileSidebar}
           onSelectChannel={selectChannelRoot}
@@ -779,6 +897,7 @@ export const App: React.FC = () => {
               starredIds={starredIds}
               unreadIds={unreadChannelIds}
               desktopSidebarOpen={desktopSidebarOpen}
+              sidebarToggleShortcut={toggleSidebarLabel}
               onToggleDesktopSidebar={toggleDesktopSidebar}
               onSelectChannel={selectChannelRoot}
               onToggleStar={toggleStar}
@@ -795,6 +914,7 @@ export const App: React.FC = () => {
                 isStarred={starredIds.includes(activeChannelId)}
                 infoTab={activeThread ? null : channelInfoTab}
                 desktopSidebarOpen={desktopSidebarOpen}
+                sidebarToggleShortcut={toggleSidebarLabel}
                 onToggleDesktopSidebar={toggleDesktopSidebar}
                 onToggleStar={toggleActiveChannelStar}
                 onToggleInfo={handleToggleInfo}
@@ -913,7 +1033,28 @@ export const App: React.FC = () => {
         onJumpToMessage={(cid, m, ts) => navigateToChannel(cid, m, ts)}
         onOpenDirectory={navigateToDirectory}
         onToggleTheme={cycleTheme}
+        onSelectTheme={setTheme}
         onToggleChannelInfo={handleToggleInfo}
+        onToggleSidebar={toggleDesktopSidebar}
+        onOpenPreferences={() => setPreferencesOpen(true)}
+        quickSwitcherShortcut={quickSwitcherLabel}
+        toggleSidebarShortcut={toggleSidebarLabel}
+        openDirectoryShortcut={openDirectoryLabel}
+        toggleChannelInfoShortcut={toggleChannelInfoLabel}
+      />
+
+      <PreferencesModal
+        open={preferencesOpen}
+        onClose={() => setPreferencesOpen(false)}
+        desktopSidebarOpen={desktopSidebarOpen}
+        onToggleDesktopSidebar={toggleDesktopSidebar}
+        sidebarWidth={sidebarWidth}
+        onChangeSidebarWidth={handleResizeSidebarWidth}
+        onResetSidebarWidth={handleResetSidebarWidth}
+        shortcuts={shortcuts}
+        onUpdateShortcut={handleUpdateShortcut}
+        onResetShortcut={handleResetShortcut}
+        onResetAll={handleResetAllPreferences}
       />
 
       <ImageLightbox

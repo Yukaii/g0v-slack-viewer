@@ -1,3 +1,4 @@
+import type { ShortcutActionId } from '../utils/shortcuts';
 import type { Locale } from '../utils/storage';
 import type { AppThemeId } from '../utils/themes';
 
@@ -14,9 +15,11 @@ export interface Translations {
     archiveLink: string;
     archiveLinkTitle: string;
     githubTitle: string;
+    customizeTitle: string;
   };
   sidebar: {
     closeSidebar: string;
+    resizeHandleLabel: string;
     stats: (msgs: string, chs: number) => string;
     channelDirectory: string;
     jumpTo: string;
@@ -173,6 +176,10 @@ export interface Translations {
     quickJumpLabel: string;
     openDirectoryAction: string;
     openDirectorySub: string;
+    toggleSidebarAction: string;
+    toggleSidebarSub: string;
+    customizeAction: string;
+    customizeSub: string;
     searchArchiveAction: (query: string) => string;
     searchArchiveActionEmpty: string;
     searchArchiveSub: string;
@@ -202,6 +209,24 @@ export interface Translations {
     themeLabel: (name: string) => string;
     items: Record<AppThemeId, { name: string; subtitle: string }>;
   };
+  preferences: {
+    title: string;
+    close: string;
+    sidebarSection: string;
+    sidebarVisible: string;
+    sidebarWidth: string;
+    sidebarResizeHint: string;
+    shortcutsSection: string;
+    shortcutsHint: string;
+    pressKeys: string;
+    clickToRebind: string;
+    presetsLabel: string;
+    conflictError: (actionName: string) => string;
+    reset: string;
+    resetAll: string;
+    escHint: string;
+    actions: Record<ShortcutActionId, { label: string; description: string }>;
+  };
   lightbox: {
     openOriginal: string;
     closePreview: string;
@@ -227,9 +252,11 @@ export const zhTW: Translations = {
     archiveLink: '原始封存站',
     archiveLinkTitle: '原始封存站 (g0v-slack-archive)',
     githubTitle: 'GitHub 專案原始碼',
+    customizeTitle: '快捷鍵與側邊欄設定',
   },
   sidebar: {
     closeSidebar: '關閉側邊欄',
+    resizeHandleLabel: '調整側邊欄寬度（拖曳調整，雙擊重設）',
     stats: (msgs, chs) => `${msgs} 則訊息 · ${chs} 個頻道`,
     channelDirectory: '頻道目錄',
     jumpTo: '快速跳轉…',
@@ -385,6 +412,10 @@ export const zhTW: Translations = {
     quickJumpLabel: '快速動作',
     openDirectoryAction: '開啟頻道目錄',
     openDirectorySub: '依成員數與訊息數瀏覽所有公開頻道',
+    toggleSidebarAction: '顯示／隱藏側邊欄',
+    toggleSidebarSub: '展開或收合左側頻道側邊欄',
+    customizeAction: '自訂快捷鍵與側邊欄',
+    customizeSub: '調整側邊欄寬度與自訂鍵盤快捷鍵',
     searchArchiveAction: (query) => `搜尋封存訊息：「${query}」`,
     searchArchiveActionEmpty: '搜尋全部封存訊息',
     searchArchiveSub: '全文搜尋所有頻道的歷史對話',
@@ -431,6 +462,45 @@ export const zhTW: Translations = {
       },
     },
   },
+  preferences: {
+    title: '快捷鍵與側邊欄',
+    close: '關閉設定',
+    sidebarSection: '側邊欄',
+    sidebarVisible: '顯示側邊欄',
+    sidebarWidth: '側邊欄寬度',
+    sidebarResizeHint: '也可以直接拖曳側邊欄右緣調整，雙擊分隔線可還原預設寬度。',
+    shortcutsSection: '鍵盤快捷鍵',
+    shortcutsHint: '點擊快捷鍵標籤後按下新的按鍵組合即可變更。',
+    pressKeys: '請按按鍵…',
+    clickToRebind: '點擊變更快捷鍵',
+    presetsLabel: '常用預設',
+    conflictError: (actionName) => `此組合已被「${actionName}」使用`,
+    reset: '重設',
+    resetAll: '全部還原預設',
+    escHint: 'Esc 取消或關閉',
+    actions: {
+      toggleSidebar: {
+        label: '顯示／隱藏側邊欄',
+        description: '收合或展開左側頻道側邊欄',
+      },
+      quickSwitcher: {
+        label: '快速切換頻道',
+        description: '開啟快速跳轉與指令面板',
+      },
+      openDirectory: {
+        label: '開啟頻道目錄',
+        description: '瀏覽所有公開頻道列表',
+      },
+      searchMessages: {
+        label: '搜尋封存訊息',
+        description: '開啟全文搜尋模式',
+      },
+      toggleChannelInfo: {
+        label: '切換頻道資訊面板',
+        description: '開啟或關閉右側頻道詳情與成員列表',
+      },
+    },
+  },
   lightbox: {
     openOriginal: '開啟原圖',
     closePreview: '關閉預覽',
@@ -456,9 +526,11 @@ export const en: Translations = {
     archiveLink: 'Archive',
     archiveLinkTitle: 'Original Archive (g0v-slack-archive)',
     githubTitle: 'GitHub Repository',
+    customizeTitle: 'Keyboard & Sidebar Settings',
   },
   sidebar: {
     closeSidebar: 'Close sidebar',
+    resizeHandleLabel: 'Resize sidebar (drag to resize, double-click to reset)',
     stats: (msgs, chs) => `${msgs} msgs · ${chs} ch`,
     channelDirectory: 'Channel Directory',
     jumpTo: 'Jump to…',
@@ -615,6 +687,10 @@ export const en: Translations = {
     quickJumpLabel: 'Quick Jump',
     openDirectoryAction: 'Open Channel Directory',
     openDirectorySub: 'Browse all public channels sorted by members & messages',
+    toggleSidebarAction: 'Toggle Sidebar',
+    toggleSidebarSub: 'Show or hide the left channel sidebar',
+    customizeAction: 'Customize Keyboard & Sidebar',
+    customizeSub: 'Adjust sidebar width and customize keyboard shortcuts',
     searchArchiveAction: (query) => `Search archive for "${query}"`,
     searchArchiveActionEmpty: 'Search all archived messages',
     searchArchiveSub: 'Full-text search across every channel',
@@ -661,6 +737,46 @@ export const en: Translations = {
       },
     },
   },
+  preferences: {
+    title: 'Keyboard & Sidebar',
+    close: 'Close settings',
+    sidebarSection: 'Sidebar',
+    sidebarVisible: 'Show sidebar',
+    sidebarWidth: 'Sidebar width',
+    sidebarResizeHint:
+      'You can also drag the right edge of the sidebar, or double-click it to reset.',
+    shortcutsSection: 'Keyboard Shortcuts',
+    shortcutsHint: 'Click any shortcut badge and press a new key combination.',
+    pressKeys: 'Press keys…',
+    clickToRebind: 'Click to change shortcut',
+    presetsLabel: 'Presets',
+    conflictError: (actionName) => `Already used by "${actionName}"`,
+    reset: 'Reset',
+    resetAll: 'Reset all to defaults',
+    escHint: 'Esc to cancel or close',
+    actions: {
+      toggleSidebar: {
+        label: 'Toggle Sidebar',
+        description: 'Collapse or expand the left channel sidebar',
+      },
+      quickSwitcher: {
+        label: 'Quick Switcher',
+        description: 'Open the quick channel jump & command palette',
+      },
+      openDirectory: {
+        label: 'Open Channel Directory',
+        description: 'Browse all public channels',
+      },
+      searchMessages: {
+        label: 'Search Messages',
+        description: 'Open full-text archive search',
+      },
+      toggleChannelInfo: {
+        label: 'Toggle Channel Details',
+        description: 'Show or hide the right channel info & members panel',
+      },
+    },
+  },
   lightbox: {
     openOriginal: 'Open',
     closePreview: 'Close preview',
@@ -686,9 +802,12 @@ export const ja: Translations = {
     archiveLink: 'アーカイブ元',
     archiveLinkTitle: 'アーカイブ元 (g0v-slack-archive)',
     githubTitle: 'GitHub リポジトリ',
+    customizeTitle: 'キーボードとサイドバー設定',
   },
   sidebar: {
     closeSidebar: 'サイドバーを閉じる',
+    resizeHandleLabel:
+      'サイドバーの幅を調整（ドラッグで変更、ダブルクリックでリセット）',
     stats: (msgs, chs) => `${msgs} 件の投稿 · ${chs} チャンネル`,
     channelDirectory: 'チャンネル一覧',
     jumpTo: 'クイック移動…',
@@ -844,6 +963,10 @@ export const ja: Translations = {
     quickJumpLabel: 'クイック操作',
     openDirectoryAction: 'チャンネル一覧を開く',
     openDirectorySub: 'メンバー数や投稿数で全パブリックチャンネルを閲覧',
+    toggleSidebarAction: 'サイドバーを表示／非表示',
+    toggleSidebarSub: '左側のチャンネルサイドバーを表示／非表示にします',
+    customizeAction: 'キーボードとサイドバーをカスタマイズ',
+    customizeSub: 'サイドバー幅とキーボードショートカットを設定',
     searchArchiveAction: (query) => `アーカイブから「${query}」を検索`,
     searchArchiveActionEmpty: '全アーカイブメッセージを検索',
     searchArchiveSub: '全チャンネルの履歴を全文検索',
@@ -887,6 +1010,46 @@ export const ja: Translations = {
       'slack-classic': {
         name: 'Slack クラシック',
         subtitle: '伝統的なオーバージーン & ブルー',
+      },
+    },
+  },
+  preferences: {
+    title: 'キーボードとサイドバー',
+    close: '設定を閉じる',
+    sidebarSection: 'サイドバー',
+    sidebarVisible: 'サイドバーを表示',
+    sidebarWidth: 'サイドバーの幅',
+    sidebarResizeHint:
+      'サイドバーの右端をドラッグしても調整でき、ダブルクリックで初期幅に戻せます。',
+    shortcutsSection: 'キーボードショートカット',
+    shortcutsHint: 'ショートカットをクリックして新しいキーを押すと変更できます。',
+    pressKeys: 'キーを入力…',
+    clickToRebind: 'クリックして変更',
+    presetsLabel: 'プリセット',
+    conflictError: (actionName) => `「${actionName}」で既に使用されています`,
+    reset: 'リセット',
+    resetAll: 'すべて初期値に戻す',
+    escHint: 'Esc でキャンセル／閉じる',
+    actions: {
+      toggleSidebar: {
+        label: 'サイドバーを表示／非表示',
+        description: '左側のチャンネルサイドバーを折りたたむ／展開する',
+      },
+      quickSwitcher: {
+        label: 'クイック切替',
+        description: 'チャンネル移動・コマンドパレットを開く',
+      },
+      openDirectory: {
+        label: 'チャンネル一覧を開く',
+        description: '全パブリックチャンネルを一覧表示',
+      },
+      searchMessages: {
+        label: 'メッセージを検索',
+        description: 'アーカイブの全文検索を開く',
+      },
+      toggleChannelInfo: {
+        label: 'チャンネル詳細を切替',
+        description: '右側のチャンネル情報・メンバーパネルを表示／非表示',
       },
     },
   },

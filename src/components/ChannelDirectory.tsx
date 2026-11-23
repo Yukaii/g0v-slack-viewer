@@ -26,6 +26,7 @@ interface ChannelDirectoryProps {
   starredIds: string[];
   unreadIds?: ReadonlySet<string>;
   desktopSidebarOpen?: boolean;
+  sidebarToggleShortcut?: string;
   onToggleDesktopSidebar?: () => void;
   onSelectChannel: (channelId: string) => void;
   onToggleStar: (channelId: string) => void;
@@ -53,6 +54,7 @@ export const ChannelDirectory: React.FC<ChannelDirectoryProps> = ({
   starredIds,
   unreadIds,
   desktopSidebarOpen = true,
+  sidebarToggleShortcut,
   onToggleDesktopSidebar,
   onSelectChannel,
   onToggleStar,
@@ -105,9 +107,15 @@ export const ChannelDirectory: React.FC<ChannelDirectoryProps> = ({
                 type="button"
                 onClick={onToggleDesktopSidebar}
                 title={
-                  desktopSidebarOpen
-                    ? t.channelHeader.hideSidebar
-                    : t.channelHeader.showSidebar
+                  sidebarToggleShortcut
+                    ? `${
+                        desktopSidebarOpen
+                          ? t.channelHeader.hideSidebar
+                          : t.channelHeader.showSidebar
+                      } (${sidebarToggleShortcut})`
+                    : desktopSidebarOpen
+                      ? t.channelHeader.hideSidebar
+                      : t.channelHeader.showSidebar
                 }
                 aria-label={
                   desktopSidebarOpen

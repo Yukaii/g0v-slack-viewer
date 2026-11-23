@@ -5,9 +5,11 @@ import {
   Hash,
   History,
   Info,
+  Keyboard,
   Languages,
   Loader2,
   Palette,
+  PanelLeft,
   Search,
   Star,
   X,
@@ -40,6 +42,12 @@ interface CommandPaletteProps {
   onToggleTheme: () => void;
   onSelectTheme?: (theme: AppThemeId) => void;
   onToggleChannelInfo: () => void;
+  onToggleSidebar?: () => void;
+  onOpenPreferences?: () => void;
+  quickSwitcherShortcut?: string;
+  toggleSidebarShortcut?: string;
+  openDirectoryShortcut?: string;
+  toggleChannelInfoShortcut?: string;
 }
 
 type SwitcherItem =
@@ -54,6 +62,8 @@ type SwitcherItem =
       key: string;
       id:
         | 'directory'
+        | 'toggle-sidebar'
+        | 'preferences'
         | 'theme'
         | 'language'
         | 'info'
@@ -115,6 +125,12 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   onToggleTheme,
   onSelectTheme,
   onToggleChannelInfo,
+  onToggleSidebar,
+  onOpenPreferences,
+  quickSwitcherShortcut,
+  toggleSidebarShortcut,
+  openDirectoryShortcut,
+  toggleChannelInfoShortcut,
 }) => {
   const { locale, setLocale, toggleLocale, t } = useI18n();
   const [mode, setMode] = useState<PaletteMode>(initialMode);
@@ -130,7 +146,8 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
 
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
-  const shortcutLabel = useMemo(() => getCommandShortcutLabel(), []);
+  const fallbackShortcutLabel = useMemo(() => getCommandShortcutLabel(), []);
+  const shortcutLabel = quickSwitcherShortcut ?? fallbackShortcutLabel;
 
   useEffect(() => {
     if (!open) return;
@@ -248,7 +265,35 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
         label: `${t.commandPalette.openDirectoryAction} (${channels.length.toLocaleString()})`,
         description: t.commandPalette.openDirectorySub,
         keywords: 'directory channels browse 目錄 頻道 瀏覽',
+        shortcut: openDirectoryShortcut,
       },
+      ...(onToggleSidebar
+        ? [
+            {
+              kind: 'action' as const,
+              key: 'act:toggle-sidebar',
+              id: 'toggle-sidebar' as const,
+              label: t.commandPalette.toggleSidebarAction,
+              description: t.commandPalette.toggleSidebarSub,
+              keywords:
+                'sidebar panel toggle hide show collapse expand 側邊欄 隱藏 顯示 サイドバー',
+              shortcut: toggleSidebarShortcut,
+            },
+          ]
+        : []),
+      ...(onOpenPreferences
+        ? [
+            {
+              kind: 'action' as const,
+              key: 'act:preferences',
+              id: 'preferences' as const,
+              label: t.commandPalette.customizeAction,
+              description: t.commandPalette.customizeSub,
+              keywords:
+                'keyboard shortcuts keybinding sidebar width resize preferences settings 快捷鍵 鍵盤 側邊欄 寬度 設定 キーボード ショートカット',
+            },
+          ]
+        : []),
       {
         kind: 'action',
         key: 'act:theme',
@@ -318,6 +363,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
               ? 'トピック、説明、メンバー数、RSS フィードを表示'
               : 'View topic, purpose, members, and RSS feed',
         keywords: 'details info topic rss 詳情 資訊 主題 詳細 情報 トピック',
+        shortcut: toggleChannelInfoShortcut,
       });
     }
 
@@ -358,6 +404,11 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     viewMode,
     locale,
     t,
+    onToggleSidebar,
+    onOpenPreferences,
+    openDirectoryShortcut,
+    toggleSidebarShortcut,
+    toggleChannelInfoShortcut,
   ]);
 
   const runArchiveSearch = useCallback(
@@ -427,6 +478,12 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       if (item.id === 'directory') {
         onOpenDirectory();
         onClose();
+      } else if (item.id === 'toggle-sidebar') {
+        onToggleSidebar?.();
+        onClose();
+      } else if (item.id === 'preferences') {
+        onClose();
+        onOpenPreferences?.();
       } else if (item.id === 'theme') {
         onToggleTheme();
         onClose();
@@ -457,6 +514,8 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       onSelectChannel,
       onClose,
       onOpenDirectory,
+      onToggleSidebar,
+      onOpenPreferences,
       onToggleTheme,
       toggleLocale,
       setLocale,
@@ -785,14 +844,18 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                   const ActionIcon =
                     item.id === 'directory'
                       ? Compass
-                      : item.id === 'theme' || item.id.startsWith('set-theme:')
-                        ? Palette
-                        : item.id === 'language' ||
-                            item.id.startsWith('set-locale:')
-                          ? Languages
-                          : item.id === 'info'
-                            ? Info
-                            : Search;
+                      : item.id === 'toggle-sidebar'
+                        ? PanelLeft
+                        : item.id === 'preferences'
+                          ? Keyboard
+                          : item.id === 'theme' || item.id.startsWith('set-theme:')
+                            ? Palette
+                            : item.id === 'language' ||
+                                item.id.startsWith('set-locale:')
+                              ? Languages
+                              : item.id === 'info'
+                                ? Info
+                                : Search;
 
                   return (
                     <button

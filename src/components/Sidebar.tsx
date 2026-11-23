@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ChevronDown,
   ChevronRight,
@@ -15,6 +15,11 @@ import { useI18n } from '../i18n/I18nContext';
 import type { ArchiveStats, ChannelSummary } from '../types';
 import { formatCompactNumber } from '../utils/format';
 import { getCommandShortcutLabel } from '../utils/platform';
+import {
+  SIDEBAR_DEFAULT_WIDTH,
+  SIDEBAR_MAX_WIDTH,
+  SIDEBAR_MIN_WIDTH,
+} from '../utils/storage';
 import type { AppThemeId } from '../utils/themes';
 import { G0vLogo } from './G0vLogo';
 
@@ -29,6 +34,10 @@ interface SidebarProps {
   recentIds: string[];
   unreadIds?: ReadonlySet<string>;
   desktopOpen?: boolean;
+  width?: number;
+  onResizeWidth?: (width: number) => void;
+  onResetWidth?: () => void;
+  quickSwitcherShortcut?: string;
   mobileOpen: boolean;
   onCloseMobile: () => void;
   onSelectChannel: (channelId: string) => void;
@@ -71,6 +80,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
   recentIds,
   unreadIds,
   desktopOpen = true,
+  width = SIDEBAR_DEFAULT_WIDTH,
+  onResizeWidth,
+  onResetWidth,
+  quickSwitcherShortcut,
   mobileOpen,
   onCloseMobile,
   onSelectChannel,
@@ -81,12 +94,91 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onToggleTheme,
 }) => {
   const { t, toggleLocale } = useI18n();
-  const shortcutLabel = useMemo(() => getCommandShortcutLabel(), []);
+  const fallbackShortcutLabel = useMemo(() => getCommandShortcutLabel(), []);
+  const shortcutLabel = quickSwitcherShortcut ?? fallbackShortcutLabel;
   const themeName = t.themes.items[theme].name;
   const [filter, setFilter] = useState('');
   const [starredOpen, setStarredOpen] = useState(true);
   const [recentOpen, setRecentOpen] = useState(true);
   const [channelsOpen, setChannelsOpen] = useState(true);
+  const [isResizing, setIsResizing] = useState(false);
+  const dragCleanupRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    return () => {
+      dragCleanupRef.current?.();
+      dragCleanupRef.current = null;
+    };
+  }, []);
+
+  const getMaxViewportWidth = useCallback(() => {
+    if (typeof window === 'undefined') return SIDEBAR_MAX_WIDTH;
+    return Math.min(
+      SIDEBAR_MAX_WIDTH,
+      Math.max(SIDEBAR_MIN_WIDTH, window.innerWidth - 360)
+    );
+  }, []);
+
+  const handleResizePointerDown = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (e.button !== 0 || !onResizeWidth) return;
+      e.preventDefault();
+
+      dragCleanupRef.current?.();
+
+      const startX = e.clientX;
+      const startWidth = width;
+      const prevUserSelect = document.body.style.userSelect;
+      const prevCursor = document.body.style.cursor;
+
+      setIsResizing(true);
+      document.body.style.userSelect = 'none';
+      document.body.style.cursor = 'col-resize';
+
+      const onPointerMove = (moveEvent: PointerEvent) => {
+        const maxAllowed = getMaxViewportWidth();
+        const nextWidth = Math.min(
+          maxAllowed,
+          Math.max(SIDEBAR_MIN_WIDTH, startWidth + (moveEvent.clientX - startX))
+        );
+        onResizeWidth(Math.round(nextWidth));
+      };
+
+      const cleanup = () => {
+        window.removeEventListener('pointermove', onPointerMove);
+        window.removeEventListener('pointerup', cleanup);
+        window.removeEventListener('pointercancel', cleanup);
+        document.body.style.userSelect = prevUserSelect;
+        document.body.style.cursor = prevCursor;
+        setIsResizing(false);
+        dragCleanupRef.current = null;
+      };
+
+      dragCleanupRef.current = cleanup;
+      window.addEventListener('pointermove', onPointerMove);
+      window.addEventListener('pointerup', cleanup);
+      window.addEventListener('pointercancel', cleanup);
+    },
+    [width, onResizeWidth, getMaxViewportWidth]
+  );
+
+  const handleResizeKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (!onResizeWidth) return;
+      const step = e.shiftKey ? 32 : 16;
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        onResizeWidth(Math.max(SIDEBAR_MIN_WIDTH, width - step));
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        onResizeWidth(Math.min(getMaxViewportWidth(), width + step));
+      } else if (e.key === 'Home' || e.key === 'Enter' || e.key === '0') {
+        e.preventDefault();
+        onResetWidth?.();
+      }
+    },
+    [width, onResizeWidth, onResetWidth, getMaxViewportWidth]
+  );
 
   const channelMap = useMemo(() => {
     const m = new Map<string, ChannelSummary>();
@@ -94,45 +186,77 @@ export const Sidebar: React.FC<SidebarProps> = ({
     return m;
   }, [channels]);
 
-  const starredChannels = useMemo(
-    () =>
-      starredIds
-        .map((id) => channelMap.get(id))
-        .filter((c): c is ChannelSummary => Boolean(c)),
-    [starredIds, channelMap]
-  );
+  const normalizedFilter = filter.trim().toLowerCase().replace(/^#/, '');
+  const hasActiveFilter = normalizedFilter.length > 0;
 
-  const recentChannels = useMemo(
-    () =>
-      recentIds
-        .filter((id) => !starredIds.includes(id))
-        .map((id) => channelMap.get(id))
-        .filter((c): c is ChannelSummary => Boolean(c))
-        .slice(0, 6),
-    [recentIds, starredIds, channelMap]
-  );
+  const starredChannels = useMemo(() => {
+    const seen = new Set<string>();
+    const list: ChannelSummary[] = [];
+    for (const id of starredIds) {
+      if (seen.has(id)) continue;
+      const ch = channelMap.get(id);
+      if (ch) {
+        seen.add(id);
+        list.push(ch);
+      }
+    }
+    return list;
+  }, [starredIds, channelMap]);
+
+  const recentChannels = useMemo(() => {
+    const seen = new Set<string>(starredChannels.map((c) => c.id));
+    const list: ChannelSummary[] = [];
+    for (const id of recentIds) {
+      if (seen.has(id)) continue;
+      const ch = channelMap.get(id);
+      if (ch) {
+        seen.add(id);
+        list.push(ch);
+        if (list.length >= 6) break;
+      }
+    }
+    return list;
+  }, [recentIds, starredChannels, channelMap]);
+
+  const prioritizedIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const ch of starredChannels) ids.add(ch.id);
+    for (const ch of recentChannels) ids.add(ch.id);
+    return ids;
+  }, [starredChannels, recentChannels]);
 
   const filteredChannels = useMemo(() => {
-    const q = filter.trim().toLowerCase().replace(/^#/, '');
-    if (!q) {
-      // Show top 45 channels by member count when unfiltered so sidebar stays snappy
-      return channels.slice(0, 45);
+    if (!hasActiveFilter) {
+      // Show top 45 remaining channels by member count, excluding channels
+      // already rendered in higher-priority Starred or Recent sections.
+      return channels
+        .filter((c) => !prioritizedIds.has(c.id))
+        .slice(0, 45);
     }
     return channels
       .filter(
         (c) =>
-          c.name.toLowerCase().includes(q) ||
-          c.topicText.toLowerCase().includes(q)
+          c.name.toLowerCase().includes(normalizedFilter) ||
+          c.topicText.toLowerCase().includes(normalizedFilter)
       )
       .slice(0, 80);
-  }, [channels, filter]);
+  }, [channels, hasActiveFilter, normalizedFilter, prioritizedIds]);
 
   const isLoadingChannels = channelsLoading && channels.length === 0;
-  const pendingStarredCount = starredIds.length;
-  const pendingRecentCount = useMemo(
-    () => recentIds.filter((id) => !starredIds.includes(id)).slice(0, 6).length,
-    [recentIds, starredIds]
+  const pendingStarredCount = useMemo(
+    () => new Set(starredIds).size,
+    [starredIds]
   );
+  const pendingRecentCount = useMemo(() => {
+    const starredSet = new Set(starredIds);
+    const seen = new Set<string>();
+    for (const id of recentIds) {
+      if (starredSet.has(id) || seen.has(id)) continue;
+      seen.add(id);
+      if (seen.size >= 6) break;
+    }
+    return seen.size;
+  }, [recentIds, starredIds]);
 
   const renderChannelSkeletonRow = (
     key: string,
@@ -202,7 +326,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const sidebarContent = (
-    <div className="flex h-full w-64 flex-col bg-[var(--slack-sidebar-bg)] text-[var(--slack-sidebar-text)] select-none">
+    <div className="flex h-full w-full flex-col bg-[var(--slack-sidebar-bg)] text-[var(--slack-sidebar-text)] select-none">
       {/* Workspace Header */}
       <div className="flex items-center justify-between border-b border-[var(--slack-sidebar-border)] px-4 py-3">
         <div className="min-w-0">
@@ -265,14 +389,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
           }`}
         >
           <Compass className="h-4 w-4 shrink-0" />
-          <span>{t.sidebar.channelDirectory}</span>
+          <span className="truncate">{t.sidebar.channelDirectory}</span>
           {isLoadingChannels ? (
             <span
               aria-hidden="true"
-              className="skeleton-sidebar ml-auto inline-block h-[18px] w-9 rounded-full"
+              className="skeleton-sidebar ml-auto inline-block h-[18px] w-9 shrink-0 rounded-full"
             />
           ) : (
-            <span className="ml-auto inline-flex h-[18px] min-w-8 items-center justify-center rounded-full bg-white/10 px-1.5 text-[11px] leading-none tabular-nums text-white/80">
+            <span className="ml-auto inline-flex h-[18px] min-w-8 shrink-0 items-center justify-center rounded-full bg-white/10 px-1.5 text-[11px] leading-none tabular-nums text-white/80">
               {channels.length}
             </span>
           )}
@@ -287,8 +411,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-sm font-medium text-[var(--slack-sidebar-text)] transition-colors hover:bg-[var(--slack-sidebar-hover)] hover:text-white"
         >
           <Search className="h-4 w-4 shrink-0" />
-          <span>{t.sidebar.jumpTo}</span>
-          <kbd className="ml-auto rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-medium text-white/75">
+          <span className="truncate">{t.sidebar.jumpTo}</span>
+          <kbd className="ml-auto shrink-0 rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-medium text-white/75">
             {shortcutLabel}
           </kbd>
         </button>
@@ -302,7 +426,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-sm font-medium text-[var(--slack-sidebar-text)] transition-colors hover:bg-[var(--slack-sidebar-hover)] hover:text-white"
         >
           <Search className="h-4 w-4 shrink-0 opacity-75" />
-          <span>{t.sidebar.searchMessages}</span>
+          <span className="truncate">{t.sidebar.searchMessages}</span>
         </button>
       </div>
 
@@ -332,7 +456,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Scrollable channel sections */}
       <div className="slack-scroll flex-1 space-y-4 overflow-y-auto px-2.5 py-2">
         {/* Starred */}
-        {!filter &&
+        {!hasActiveFilter &&
           (starredChannels.length > 0 ||
             (isLoadingChannels && pendingStarredCount > 0)) && (
             <div>
@@ -372,7 +496,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
 
         {/* Recent */}
-        {!filter &&
+        {!hasActiveFilter &&
           (recentChannels.length > 0 ||
             (isLoadingChannels && pendingRecentCount > 0)) && (
             <div>
@@ -424,7 +548,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <ChevronRight className="h-3.5 w-3.5" />
               )}
               <span>
-                {filter
+                {hasActiveFilter
                   ? t.sidebar.matchingChannels
                   : t.sidebar.popularChannels}
               </span>
@@ -441,7 +565,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     )
                   )
                 : filteredChannels.map(renderChannelRow)}
-              {!isLoadingChannels && !filter && channels.length > 45 && (
+              {!isLoadingChannels &&
+                !hasActiveFilter &&
+                prioritizedIds.size + filteredChannels.length <
+                  channels.length && (
                 <button
                   type="button"
                   onClick={() => {
@@ -450,8 +577,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   }}
                   className="mt-1.5 flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-xs font-medium text-white/65 hover:bg-[var(--slack-sidebar-hover)] hover:text-white"
                 >
-                  <Compass className="h-3.5 w-3.5" />
-                  {t.sidebar.browseAll(channels.length)}
+                  <Compass className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">
+                    {t.sidebar.browseAll(channels.length)}
+                  </span>
                 </button>
               )}
             </div>
@@ -512,7 +641,36 @@ export const Sidebar: React.FC<SidebarProps> = ({
     <>
       {/* Desktop sidebar */}
       {desktopOpen && (
-        <div className="hidden h-full shrink-0 lg:block">{sidebarContent}</div>
+        <div
+          className="relative hidden h-full shrink-0 lg:flex"
+          style={{ width: `${width}px` }}
+        >
+          <div className="h-full w-full min-w-0">{sidebarContent}</div>
+          {onResizeWidth && (
+            <div
+              role="separator"
+              aria-orientation="vertical"
+              aria-label={t.sidebar.resizeHandleLabel}
+              aria-valuenow={width}
+              aria-valuemin={SIDEBAR_MIN_WIDTH}
+              aria-valuemax={SIDEBAR_MAX_WIDTH}
+              tabIndex={0}
+              title={t.sidebar.resizeHandleLabel}
+              onPointerDown={handleResizePointerDown}
+              onDoubleClick={onResetWidth}
+              onKeyDown={handleResizeKeyDown}
+              className="group absolute top-0 -right-1 z-20 flex h-full w-2.5 cursor-col-resize items-center justify-center focus:outline-none"
+            >
+              <span
+                className={`h-full w-0.5 transition-colors ${
+                  isResizing
+                    ? 'bg-[var(--slack-accent)]'
+                    : 'bg-transparent group-hover:bg-[var(--slack-accent)]/75 group-focus-visible:bg-[var(--slack-accent)]'
+                }`}
+              />
+            </div>
+          )}
+        </div>
       )}
 
       {/* Mobile drawer */}
@@ -522,7 +680,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             className="fixed inset-0 bg-black/50"
             onClick={onCloseMobile}
           />
-          <div className="relative z-10 h-full shadow-2xl">
+          <div className="relative z-10 h-full w-64 max-w-[85vw] shadow-2xl">
             {sidebarContent}
           </div>
         </div>

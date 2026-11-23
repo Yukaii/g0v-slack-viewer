@@ -38,6 +38,7 @@ import { useI18n } from './i18n/I18nContext';
 import { Sidebar } from './components/Sidebar';
 import { ChannelHeader, type ChannelInfoTab } from './components/ChannelHeader';
 import { MessageList } from './components/MessageList';
+import { MessageListSkeleton } from './components/MessageListSkeleton';
 import { ThreadPanel } from './components/ThreadPanel';
 import { ChannelInfoPanel } from './components/ChannelInfoPanel';
 import { ChannelDirectory } from './components/ChannelDirectory';
@@ -137,7 +138,9 @@ export const App: React.FC = () => {
 
   const [theme, setTheme] = useState<AppThemeId>(() => loadTheme());
   const [stats, setStats] = useState<ArchiveStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
   const [channels, setChannels] = useState<ChannelSummary[]>([]);
+  const [channelsLoading, setChannelsLoading] = useState(true);
   const [starredIds, setStarredIds] = useState<string[]>(() =>
     loadStarredChannels()
   );
@@ -167,7 +170,9 @@ export const App: React.FC = () => {
   const [loadingPrev, setLoadingPrev] = useState(false);
   const [loadingNext, setLoadingNext] = useState(false);
 
-  const [channelLoading, setChannelLoading] = useState(false);
+  const [channelLoading, setChannelLoading] = useState(
+    initialRoute.viewMode === 'channel'
+  );
   const [channelError, setChannelError] = useState<string | null>(null);
   const sessionRef = useRef(0);
   const highlightSeqRef = useRef(initialRoute.highlightTs ? 1 : 0);
@@ -262,10 +267,12 @@ export const App: React.FC = () => {
   useEffect(() => {
     fetchStats()
       .then(setStats)
-      .catch((err) => console.warn('Stats load failed:', err));
+      .catch((err) => console.warn('Stats load failed:', err))
+      .finally(() => setStatsLoading(false));
     fetchChannels()
       .then(setChannels)
-      .catch((err) => console.warn('Channels load failed:', err));
+      .catch((err) => console.warn('Channels load failed:', err))
+      .finally(() => setChannelsLoading(false));
   }, []);
 
   // Treat channels we have never tracked as read at their current last post,
@@ -672,6 +679,7 @@ export const App: React.FC = () => {
 
   const activeDetail =
     channelDetail?.channelId === activeChannelId ? channelDetail : null;
+  const isChannelPending = !activeDetail && !channelError;
   const sessionKey = activeDetail
     ? `${activeDetail.channelId}:${activeDetail.activeMonth}`
     : `${activeChannelId}:loading`;
@@ -741,7 +749,9 @@ export const App: React.FC = () => {
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <Sidebar
           channels={channels}
+          channelsLoading={channelsLoading}
           stats={stats}
+          statsLoading={statsLoading}
           activeChannelId={activeChannelId}
           viewMode={viewMode}
           starredIds={starredIds}
@@ -763,7 +773,9 @@ export const App: React.FC = () => {
           {viewMode === 'directory' ? (
             <ChannelDirectory
               channels={channels}
+              channelsLoading={channelsLoading}
               stats={stats}
+              statsLoading={statsLoading}
               starredIds={starredIds}
               unreadIds={unreadChannelIds}
               desktopSidebarOpen={desktopSidebarOpen}
@@ -778,7 +790,8 @@ export const App: React.FC = () => {
                 summary={activeChannelSummary}
                 detail={activeDetail}
                 loadedMonths={activeDetail ? loadedMonths : []}
-                loading={channelLoading}
+                loading={channelLoading || isChannelPending}
+                channelsLoading={channelsLoading}
                 isStarred={starredIds.includes(activeChannelId)}
                 infoTab={activeThread ? null : channelInfoTab}
                 desktopSidebarOpen={desktopSidebarOpen}
@@ -792,11 +805,8 @@ export const App: React.FC = () => {
                 onNavigateChannel={navigateToChannel}
               />
 
-              {channelLoading && !activeDetail ? (
-                <div className="flex flex-1 flex-col items-center justify-center gap-3 text-sm text-[var(--slack-text-muted)]">
-                  <Loader2 className="h-7 w-7 animate-spin text-[var(--slack-accent)]" />
-                  <span>{t.app.loadingMessages}</span>
-                </div>
+              {(channelLoading || isChannelPending) && !activeDetail ? (
+                <MessageListSkeleton />
               ) : channelError && !activeDetail ? (
                 <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
                   <AlertCircle className="h-9 w-9 text-rose-500" />

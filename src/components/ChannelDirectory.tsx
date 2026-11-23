@@ -20,7 +20,9 @@ type SortKey = 'members' | 'messages' | 'recent' | 'name';
 
 interface ChannelDirectoryProps {
   channels: ChannelSummary[];
+  channelsLoading?: boolean;
   stats: ArchiveStats | null;
+  statsLoading?: boolean;
   starredIds: string[];
   unreadIds?: ReadonlySet<string>;
   desktopSidebarOpen?: boolean;
@@ -30,9 +32,24 @@ interface ChannelDirectoryProps {
   onOpenMobileSidebar: () => void;
 }
 
+const DIRECTORY_SKELETON_ROWS = [
+  { name: '7.5rem', desc1: '68%', desc2: '42%' },
+  { name: '10rem', desc1: '82%' },
+  { name: '6rem', desc1: '58%', desc2: '34%' },
+  { name: '9rem', desc1: '75%' },
+  { name: '8rem', desc1: '64%', desc2: '48%' },
+  { name: '11rem', desc1: '72%' },
+  { name: '6.5rem', desc1: '80%', desc2: '36%' },
+  { name: '8.5rem', desc1: '60%' },
+  { name: '7rem', desc1: '74%', desc2: '44%' },
+  { name: '9.5rem', desc1: '66%' },
+];
+
 export const ChannelDirectory: React.FC<ChannelDirectoryProps> = ({
   channels,
+  channelsLoading = false,
   stats,
+  statsLoading = false,
   starredIds,
   unreadIds,
   desktopSidebarOpen = true,
@@ -111,15 +128,25 @@ export const ChannelDirectory: React.FC<ChannelDirectoryProps> = ({
               <h1 className="text-base font-extrabold text-[var(--slack-text)] sm:text-lg">
                 {t.channelDirectory.title}
               </h1>
-              <p className="text-xs text-[var(--slack-text-muted)]">
-                {stats
-                  ? t.channelDirectory.summary(
+              <div className="flex min-h-4 items-center text-xs text-[var(--slack-text-muted)]">
+                {(channelsLoading && channels.length === 0) ||
+                (statsLoading && !stats) ? (
+                  <span
+                    aria-hidden="true"
+                    className="skeleton-block h-3 w-52 rounded sm:w-72"
+                  />
+                ) : stats ? (
+                  <p>
+                    {t.channelDirectory.summary(
                       channels.length.toLocaleString(),
                       stats.messages.toLocaleString(),
                       stats.users.toLocaleString()
-                    )
-                  : t.sidebar.browseAll(channels.length)}
-              </p>
+                    )}
+                  </p>
+                ) : (
+                  <p>{t.sidebar.browseAll(channels.length)}</p>
+                )}
+              </div>
             </div>
           </div>
 
@@ -163,7 +190,61 @@ export const ChannelDirectory: React.FC<ChannelDirectoryProps> = ({
 
       {/* Channel List */}
       <div className="slack-scroll min-h-0 flex-1 overflow-y-auto divide-y divide-[var(--slack-border)]">
-        {filtered.map((ch) => {
+        {channelsLoading && channels.length === 0 ? (
+          <div
+            role="status"
+            aria-busy="true"
+            aria-label={t.app.loading}
+            className="divide-y divide-[var(--slack-border)]"
+          >
+            <span className="sr-only">{t.app.loading}</span>
+            {DIRECTORY_SKELETON_ROWS.map((row, idx) => (
+              <div
+                key={idx}
+                aria-hidden="true"
+                className="flex items-start justify-between gap-4 px-3 py-3 sm:px-5 sm:py-3.5"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <span className="inline-flex items-center gap-1">
+                      <Hash className="h-4 w-4 text-[var(--slack-text-muted)] opacity-35" />
+                      <span
+                        className="skeleton-block-strong h-4 rounded"
+                        style={{ width: row.name }}
+                      />
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <Users className="h-3 w-3 text-[var(--slack-text-muted)] opacity-35" />
+                      <span className="skeleton-block h-3 w-9 rounded" />
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <MessageSquare className="h-3 w-3 text-[var(--slack-text-muted)] opacity-35" />
+                      <span className="skeleton-block h-3 w-10 rounded" />
+                    </span>
+                    <span className="skeleton-block hidden h-3 w-24 rounded sm:inline-block" />
+                  </div>
+                  <div className="mt-2 max-w-2xl space-y-1.5">
+                    <div
+                      className="skeleton-block h-3 rounded"
+                      style={{ width: row.desc1 }}
+                    />
+                    {row.desc2 && (
+                      <div
+                        className="skeleton-block h-3 rounded"
+                        style={{ width: row.desc2 }}
+                      />
+                    )}
+                  </div>
+                </div>
+                <span className="inline-flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-md border border-[var(--slack-border)] text-[var(--slack-text-muted)] opacity-35">
+                  <Star className="h-4 w-4" />
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <>
+            {filtered.map((ch) => {
           const isStarred = starredSet.has(ch.id);
           const isUnread = Boolean(unreadIds?.has(ch.id));
           return (
@@ -245,6 +326,8 @@ export const ChannelDirectory: React.FC<ChannelDirectoryProps> = ({
           <div className="px-6 py-16 text-center text-sm text-[var(--slack-text-muted)]">
             {t.channelDirectory.noMatches(query)}
           </div>
+        )}
+          </>
         )}
       </div>
     </div>

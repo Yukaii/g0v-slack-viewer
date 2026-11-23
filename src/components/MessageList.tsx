@@ -475,7 +475,7 @@ export const MessageList: React.FC<MessageListProps> = ({
     <div className="flex min-h-0 flex-1 flex-col">
       {/* Sub-toolbar: loaded month range, sort toggle, quick jump, filter */}
       <div className="border-b border-[var(--slack-border)] bg-[var(--slack-surface-bg)] px-2.5 py-1 text-[11px] sm:px-4 sm:py-1 sm:text-xs">
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex min-h-6 items-center justify-between gap-2">
           <div className="slack-scroll flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto whitespace-nowrap text-[var(--slack-text-muted)] sm:gap-1.5">
             <span className="shrink-0">
               <span className="hidden sm:inline">{t.messageList.showing}</span>
@@ -550,7 +550,7 @@ export const MessageList: React.FC<MessageListProps> = ({
           <button
             type="button"
             onClick={() => setMobileFilterOpen((v) => !v)}
-            className={`inline-flex shrink-0 items-center gap-1 rounded-md border px-2 py-1 sm:hidden ${
+            className={`inline-flex h-6 shrink-0 items-center gap-1 rounded-md border px-2 sm:hidden ${
               mobileFilterOpen || localFilter
                 ? 'border-[var(--slack-accent)] bg-[var(--slack-accent)]/10 text-[var(--slack-link)]'
                 : 'border-[var(--slack-border)] bg-[var(--slack-main-bg)] text-[var(--slack-text-muted)]'
@@ -567,7 +567,7 @@ export const MessageList: React.FC<MessageListProps> = ({
               value={localFilter}
               onChange={(e) => setLocalFilter(e.target.value)}
               placeholder={t.messageList.filterPlaceholder}
-              className="w-52 rounded-md border border-[var(--slack-border)] bg-[var(--slack-main-bg)] py-0.5 pr-6 pl-7 text-xs text-[var(--slack-text)] placeholder:text-[var(--slack-text-muted)] focus:border-[var(--slack-accent)] focus:outline-none"
+              className="h-6 w-52 rounded-md border border-[var(--slack-border)] bg-[var(--slack-main-bg)] pr-6 pl-7 text-xs text-[var(--slack-text)] placeholder:text-[var(--slack-text-muted)] focus:border-[var(--slack-accent)] focus:outline-none"
             />
             {localFilter && (
               <button

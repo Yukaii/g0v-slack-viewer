@@ -22,6 +22,10 @@ html[data-theme="g0v-light"] {
   --slack-accent: #c8161d;
   --slack-badge-bg: #f0f0f3;
   --slack-highlight-bg: rgba(200, 22, 29, 0.1);
+  --slack-skeleton: #e9e9ed;
+  --slack-skeleton-strong: #dedee4;
+  --slack-sidebar-skeleton: rgba(255, 255, 255, 0.12);
+  --slack-sidebar-skeleton-subtle: rgba(255, 255, 255, 0.08);
 }
 
 /* g0v Night (Dark hacker mode) */
@@ -46,6 +50,10 @@ html.dark {
   --slack-accent: #ef4444;
   --slack-badge-bg: #27272f;
   --slack-highlight-bg: rgba(239, 68, 68, 0.16);
+  --slack-skeleton: #282832;
+  --slack-skeleton-strong: #333340;
+  --slack-sidebar-skeleton: rgba(255, 255, 255, 0.11);
+  --slack-sidebar-skeleton-subtle: rgba(255, 255, 255, 0.07);
 }
 
 /* g0v Jothon (Summit jade & warm civic paper) */
@@ -69,6 +77,10 @@ html[data-theme="g0v-jothon"] {
   --slack-accent: #c8161d;
   --slack-badge-bg: #ebe5d6;
   --slack-highlight-bg: rgba(217, 119, 6, 0.14);
+  --slack-skeleton: #e6dfd0;
+  --slack-skeleton-strong: #dad1be;
+  --slack-sidebar-skeleton: rgba(255, 255, 255, 0.12);
+  --slack-sidebar-skeleton-subtle: rgba(255, 255, 255, 0.08);
 }
 
 /* Slack Classic (Optional traditional purple) */
@@ -92,6 +104,10 @@ html[data-theme="slack-classic"] {
   --slack-accent: #1164a3;
   --slack-badge-bg: #f2f2f4;
   --slack-highlight-bg: #fff8dc;
+  --slack-skeleton: #eaecef;
+  --slack-skeleton-strong: #dfe2e6;
+  --slack-sidebar-skeleton: rgba(255, 255, 255, 0.14);
+  --slack-sidebar-skeleton-subtle: rgba(255, 255, 255, 0.09);
 }
 
 html,
@@ -253,4 +269,44 @@ html.dark .slack-html .special-mention {
 
 .message-flash {
   animation: flash-highlight 2.8s ease-out;
+}
+
+/* Placeholder skeleton blocks */
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.48;
+  }
+}
+
+.skeleton-block {
+  background-color: var(--slack-skeleton);
+  animation: skeleton-pulse 1.6s ease-in-out infinite;
+}
+
+.skeleton-block-strong {
+  background-color: var(--slack-skeleton-strong);
+  animation: skeleton-pulse 1.6s ease-in-out infinite;
+}
+
+.skeleton-sidebar {
+  background-color: var(--slack-sidebar-skeleton);
+  animation: skeleton-pulse 1.6s ease-in-out infinite;
+}
+
+.skeleton-sidebar-subtle {
+  background-color: var(--slack-sidebar-skeleton-subtle);
+  animation: skeleton-pulse 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-block,
+  .skeleton-block-strong,
+  .skeleton-sidebar,
+  .skeleton-sidebar-subtle {
+    animation: none;
+  }
 }

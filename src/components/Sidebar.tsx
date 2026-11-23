@@ -20,7 +20,9 @@ import { G0vLogo } from './G0vLogo';
 
 interface SidebarProps {
   channels: ChannelSummary[];
+  channelsLoading?: boolean;
   stats: ArchiveStats | null;
+  statsLoading?: boolean;
   activeChannelId: string | null;
   viewMode: 'channel' | 'directory';
   starredIds: string[];
@@ -37,9 +39,32 @@ interface SidebarProps {
   onToggleTheme: () => void;
 }
 
+const SIDEBAR_SKELETON_WIDTHS: Array<{ name: string; count: string }> = [
+  { name: '58%', count: '26px' },
+  { name: '74%', count: '22px' },
+  { name: '46%', count: '28px' },
+  { name: '80%', count: '20px' },
+  { name: '64%', count: '24px' },
+  { name: '52%', count: '26px' },
+  { name: '70%', count: '18px' },
+  { name: '42%', count: '24px' },
+  { name: '76%', count: '22px' },
+  { name: '60%', count: '28px' },
+  { name: '68%', count: '20px' },
+  { name: '50%', count: '24px' },
+  { name: '72%', count: '22px' },
+  { name: '44%', count: '26px' },
+  { name: '66%', count: '18px' },
+  { name: '56%', count: '24px' },
+  { name: '78%', count: '22px' },
+  { name: '48%', count: '26px' },
+];
+
 export const Sidebar: React.FC<SidebarProps> = ({
   channels,
+  channelsLoading = false,
   stats,
+  statsLoading = false,
   activeChannelId,
   viewMode,
   starredIds,
@@ -102,6 +127,37 @@ export const Sidebar: React.FC<SidebarProps> = ({
       .slice(0, 80);
   }, [channels, filter]);
 
+  const isLoadingChannels = channelsLoading && channels.length === 0;
+  const pendingStarredCount = starredIds.length;
+  const pendingRecentCount = useMemo(
+    () => recentIds.filter((id) => !starredIds.includes(id)).slice(0, 6).length,
+    [recentIds, starredIds]
+  );
+
+  const renderChannelSkeletonRow = (
+    key: string,
+    nameWidth: string,
+    countWidth: string
+  ) => (
+    <div
+      key={key}
+      aria-hidden="true"
+      className="flex h-7 w-full items-center justify-between gap-2 rounded-md px-2.5"
+    >
+      <span className="flex min-w-0 flex-1 items-center gap-2">
+        <Hash className="h-3.5 w-3.5 shrink-0 opacity-25" />
+        <span
+          className="skeleton-sidebar h-3 rounded"
+          style={{ width: nameWidth }}
+        />
+      </span>
+      <span
+        className="skeleton-sidebar-subtle h-2.5 shrink-0 rounded"
+        style={{ width: countWidth }}
+      />
+    </div>
+  );
+
   const renderChannelRow = (ch: ChannelSummary) => {
     const isActive = viewMode === 'channel' && activeChannelId === ch.id;
     const isUnread = Boolean(unreadIds?.has(ch.id));
@@ -113,7 +169,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           onSelectChannel(ch.id);
           onCloseMobile();
         }}
-        className={`group flex w-full items-center justify-between gap-2 rounded-md px-2.5 py-1 text-left text-[14px] transition-colors ${
+        className={`group flex h-7 w-full items-center justify-between gap-2 rounded-md px-2.5 text-left text-[14px] leading-5 transition-colors ${
           isActive
             ? 'bg-[var(--slack-sidebar-active)] font-semibold text-white'
             : isUnread
@@ -166,11 +222,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
             </div>
           </div>
-          {stats && (
-            <div className="mt-1 truncate text-[11px] text-white/55">
-              {t.sidebar.stats(
-                formatCompactNumber(stats.messages),
-                stats.channels
+          {(stats || statsLoading) && (
+            <div className="mt-1 flex h-4 items-center text-[11px] leading-4 text-white/55">
+              {stats ? (
+                <span className="truncate">
+                  {t.sidebar.stats(
+                    formatCompactNumber(stats.messages),
+                    stats.channels
+                  )}
+                </span>
+              ) : (
+                <span
+                  aria-hidden="true"
+                  className="skeleton-sidebar h-2.5 w-32 rounded"
+                />
               )}
             </div>
           )}
@@ -201,9 +266,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
         >
           <Compass className="h-4 w-4 shrink-0" />
           <span>{t.sidebar.channelDirectory}</span>
-          <span className="ml-auto rounded-full bg-white/10 px-1.5 py-0.2 text-[11px] text-white/80">
-            {channels.length || '…'}
-          </span>
+          {isLoadingChannels ? (
+            <span
+              aria-hidden="true"
+              className="skeleton-sidebar ml-auto inline-block h-[18px] w-9 rounded-full"
+            />
+          ) : (
+            <span className="ml-auto inline-flex h-[18px] min-w-8 items-center justify-center rounded-full bg-white/10 px-1.5 text-[11px] leading-none tabular-nums text-white/80">
+              {channels.length}
+            </span>
+          )}
         </button>
 
         <button
@@ -260,51 +332,83 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Scrollable channel sections */}
       <div className="slack-scroll flex-1 space-y-4 overflow-y-auto px-2.5 py-2">
         {/* Starred */}
-        {!filter && starredChannels.length > 0 && (
-          <div>
-            <button
-              type="button"
-              onClick={() => setStarredOpen((v) => !v)}
-              className="mb-1 flex w-full items-center gap-1 px-1.5 text-xs font-semibold tracking-wide text-white/65 hover:text-white"
-            >
-              {starredOpen ? (
-                <ChevronDown className="h-3.5 w-3.5" />
-              ) : (
-                <ChevronRight className="h-3.5 w-3.5" />
+        {!filter &&
+          (starredChannels.length > 0 ||
+            (isLoadingChannels && pendingStarredCount > 0)) && (
+            <div>
+              <button
+                type="button"
+                onClick={() => setStarredOpen((v) => !v)}
+                className="mb-1 flex w-full items-center gap-1 px-1.5 text-xs font-semibold tracking-wide text-white/65 hover:text-white"
+              >
+                {starredOpen ? (
+                  <ChevronDown className="h-3.5 w-3.5" />
+                ) : (
+                  <ChevronRight className="h-3.5 w-3.5" />
+                )}
+                <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                <span>{t.sidebar.starred}</span>
+              </button>
+              {starredOpen && (
+                <div className="space-y-0.5">
+                  {isLoadingChannels
+                    ? Array.from({ length: pendingStarredCount }).map(
+                        (_, idx) => {
+                          const spec =
+                            SIDEBAR_SKELETON_WIDTHS[
+                              idx % SIDEBAR_SKELETON_WIDTHS.length
+                            ];
+                          return renderChannelSkeletonRow(
+                            `starred-sk-${idx}`,
+                            spec.name,
+                            spec.count
+                          );
+                        }
+                      )
+                    : starredChannels.map(renderChannelRow)}
+                </div>
               )}
-              <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-              <span>{t.sidebar.starred}</span>
-            </button>
-            {starredOpen && (
-              <div className="space-y-0.5">
-                {starredChannels.map(renderChannelRow)}
-              </div>
-            )}
-          </div>
-        )}
+            </div>
+          )}
 
         {/* Recent */}
-        {!filter && recentChannels.length > 0 && (
-          <div>
-            <button
-              type="button"
-              onClick={() => setRecentOpen((v) => !v)}
-              className="mb-1 flex w-full items-center gap-1 px-1.5 text-xs font-semibold tracking-wide text-white/65 hover:text-white"
-            >
-              {recentOpen ? (
-                <ChevronDown className="h-3.5 w-3.5" />
-              ) : (
-                <ChevronRight className="h-3.5 w-3.5" />
+        {!filter &&
+          (recentChannels.length > 0 ||
+            (isLoadingChannels && pendingRecentCount > 0)) && (
+            <div>
+              <button
+                type="button"
+                onClick={() => setRecentOpen((v) => !v)}
+                className="mb-1 flex w-full items-center gap-1 px-1.5 text-xs font-semibold tracking-wide text-white/65 hover:text-white"
+              >
+                {recentOpen ? (
+                  <ChevronDown className="h-3.5 w-3.5" />
+                ) : (
+                  <ChevronRight className="h-3.5 w-3.5" />
+                )}
+                <span>{t.sidebar.recent}</span>
+              </button>
+              {recentOpen && (
+                <div className="space-y-0.5">
+                  {isLoadingChannels
+                    ? Array.from({ length: pendingRecentCount }).map(
+                        (_, idx) => {
+                          const spec =
+                            SIDEBAR_SKELETON_WIDTHS[
+                              (idx + 3) % SIDEBAR_SKELETON_WIDTHS.length
+                            ];
+                          return renderChannelSkeletonRow(
+                            `recent-sk-${idx}`,
+                            spec.name,
+                            spec.count
+                          );
+                        }
+                      )
+                    : recentChannels.map(renderChannelRow)}
+                </div>
               )}
-              <span>{t.sidebar.recent}</span>
-            </button>
-            {recentOpen && (
-              <div className="space-y-0.5">
-                {recentChannels.map(renderChannelRow)}
-              </div>
-            )}
-          </div>
-        )}
+            </div>
+          )}
 
         {/* Channels */}
         <div>
@@ -328,8 +432,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
           {channelsOpen && (
             <div className="space-y-0.5">
-              {filteredChannels.map(renderChannelRow)}
-              {!filter && channels.length > 45 && (
+              {isLoadingChannels
+                ? SIDEBAR_SKELETON_WIDTHS.map((spec, idx) =>
+                    renderChannelSkeletonRow(
+                      `ch-sk-${idx}`,
+                      spec.name,
+                      spec.count
+                    )
+                  )
+                : filteredChannels.map(renderChannelRow)}
+              {!isLoadingChannels && !filter && channels.length > 45 && (
                 <button
                   type="button"
                   onClick={() => {

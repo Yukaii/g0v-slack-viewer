@@ -25,6 +25,7 @@ interface ChannelHeaderProps {
   detail: ChannelDetailResponse | null;
   loadedMonths?: string[];
   loading: boolean;
+  channelsLoading?: boolean;
   isStarred: boolean;
   infoTab: ChannelInfoTab | null;
   desktopSidebarOpen?: boolean;
@@ -38,11 +39,24 @@ interface ChannelHeaderProps {
   onNavigateChannel: (channelId: string, month?: string, ts?: string) => void;
 }
 
+const TIMELINE_SKELETON_PILLS = [
+  { label: '28px', count: '22px' },
+  { label: '28px', count: '18px' },
+  { label: '28px', count: '26px' },
+  { label: '28px', count: '20px' },
+  { label: '28px', count: '24px' },
+  { label: '28px', count: '18px' },
+  { label: '28px', count: '22px' },
+  { label: '28px', count: '26px' },
+  { label: '28px', count: '20px' },
+];
+
 export const ChannelHeader: React.FC<ChannelHeaderProps> = ({
   summary,
   detail,
   loadedMonths = [],
   loading,
+  channelsLoading = false,
   isStarred,
   infoTab,
   desktopSidebarOpen = true,
@@ -68,6 +82,10 @@ export const ChannelHeader: React.FC<ChannelHeaderProps> = ({
     const lastYear = detail.years[detail.years.length - 1];
     return lastYear.months[lastYear.months.length - 1]?.month || '';
   }, [detail]);
+
+  const channelDisplayName = detail?.channelName || summary?.name;
+  const isNameLoading = !channelDisplayName && (loading || channelsLoading);
+  const showTimelineSkeleton = !detail && loading;
 
   return (
     <header className="shrink-0 border-b border-[var(--slack-border)] bg-[var(--slack-main-bg)]">
@@ -110,8 +128,17 @@ export const ChannelHeader: React.FC<ChannelHeaderProps> = ({
 
           <div className="flex min-w-0 items-center gap-1">
             <Hash className="h-4 w-4 shrink-0 text-[var(--slack-text-muted)] sm:h-4.5 sm:w-4.5" />
-            <h1 className="truncate text-sm font-extrabold tracking-tight text-[var(--slack-text)] sm:text-base">
-              {detail?.channelName || summary?.name || '...'}
+            <h1 className="flex min-h-5 min-w-0 items-center text-sm font-extrabold tracking-tight text-[var(--slack-text)] sm:min-h-6 sm:text-base">
+              {channelDisplayName ? (
+                <span className="truncate">{channelDisplayName}</span>
+              ) : isNameLoading ? (
+                <span
+                  aria-hidden="true"
+                  className="skeleton-block-strong inline-block h-4 w-28 rounded sm:h-4.5 sm:w-36"
+                />
+              ) : (
+                <span>...</span>
+              )}
             </h1>
             <button
               type="button"
@@ -133,7 +160,7 @@ export const ChannelHeader: React.FC<ChannelHeaderProps> = ({
             </button>
           </div>
 
-          {summary?.topicHtml && (
+          {summary?.topicHtml ? (
             <div className="hidden min-w-0 border-l border-[var(--slack-border)] pl-2.5 text-xs text-[var(--slack-text-muted)] md:block">
               <div className="line-clamp-1">
                 <RichContent
@@ -143,7 +170,14 @@ export const ChannelHeader: React.FC<ChannelHeaderProps> = ({
                 />
               </div>
             </div>
-          )}
+          ) : !summary && channelsLoading ? (
+            <div
+              aria-hidden="true"
+              className="hidden min-w-0 items-center border-l border-[var(--slack-border)] pl-2.5 md:flex"
+            >
+              <span className="skeleton-block h-3.5 w-44 rounded lg:w-64" />
+            </div>
+          ) : null}
         </div>
 
         <div className="flex shrink-0 items-center gap-1.5">
@@ -151,34 +185,44 @@ export const ChannelHeader: React.FC<ChannelHeaderProps> = ({
             type="button"
             onClick={onOpenSwitcher}
             title={t.channelHeader.jumpOrSearch}
-            className="inline-flex items-center justify-center rounded-md border border-[var(--slack-border)] p-1 text-[var(--slack-text-muted)] hover:bg-[var(--slack-badge-bg)] hover:text-[var(--slack-text)] sm:hidden"
+            className="inline-flex h-6 items-center justify-center rounded-md border border-[var(--slack-border)] px-1.5 text-[var(--slack-text-muted)] hover:bg-[var(--slack-badge-bg)] hover:text-[var(--slack-text)] sm:hidden"
             aria-label={t.channelHeader.jumpOrSearch}
           >
             <Search className="h-3.5 w-3.5" />
           </button>
-          {summary && (
+          {summary ? (
             <button
               type="button"
               onClick={onToggleMembers}
               title={t.channelHeader.viewMembers}
               aria-label={t.channelHeader.viewMembers}
               aria-pressed={infoTab === 'members'}
-              className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium transition sm:gap-1.5 ${
+              className={`inline-flex h-6 items-center gap-1 rounded-md border px-2 text-xs font-medium transition sm:gap-1.5 ${
                 infoTab === 'members'
                   ? 'border-[var(--slack-accent)] bg-[var(--slack-accent)]/10 text-[var(--slack-link)]'
                   : 'border-[var(--slack-border)] text-[var(--slack-text-muted)] hover:bg-[var(--slack-badge-bg)] hover:text-[var(--slack-text)]'
               }`}
             >
               <Users className="h-3.5 w-3.5" />
-              <span>{formatCompactNumber(summary.memberCount)}</span>
+              <span className="tabular-nums">
+                {formatCompactNumber(summary.memberCount)}
+              </span>
             </button>
-          )}
+          ) : channelsLoading ? (
+            <div
+              aria-hidden="true"
+              className="inline-flex h-6 items-center gap-1 rounded-md border border-[var(--slack-border)] px-2 text-xs sm:gap-1.5"
+            >
+              <Users className="h-3.5 w-3.5 text-[var(--slack-text-muted)] opacity-40" />
+              <span className="skeleton-block h-3 w-7 rounded" />
+            </div>
+          ) : null}
           <button
             type="button"
             onClick={onToggleInfo}
             title={t.channelHeader.channelDetails}
             aria-pressed={infoTab === 'about'}
-            className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium transition ${
+            className={`inline-flex h-6 items-center gap-1 rounded-md border px-2 text-xs font-medium transition ${
               infoTab === 'about'
                 ? 'border-[var(--slack-accent)] bg-[var(--slack-accent)]/10 text-[var(--slack-link)]'
                 : 'border-[var(--slack-border)] text-[var(--slack-text-muted)] hover:bg-[var(--slack-badge-bg)] hover:text-[var(--slack-text)]'
@@ -191,12 +235,31 @@ export const ChannelHeader: React.FC<ChannelHeaderProps> = ({
       </div>
 
       {/* Compact Mobile Timeline Toggle Row */}
-      {detail && detail.years.length > 0 && (
+      {showTimelineSkeleton ? (
+        <div
+          aria-hidden="true"
+          className="flex items-center justify-between gap-2 border-t border-[var(--slack-border)] bg-[var(--slack-surface-bg)] px-2.5 py-1 sm:hidden"
+        >
+          <div className="inline-flex h-7 items-center gap-1.5 rounded-md border border-[var(--slack-border)] bg-[var(--slack-main-bg)] px-2.5">
+            <Calendar className="h-3.5 w-3.5 text-[var(--slack-text-muted)] opacity-40" />
+            <span className="skeleton-block h-3 w-16 rounded" />
+            <ChevronDown className="h-3.5 w-3.5 text-[var(--slack-text-muted)] opacity-35" />
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="inline-flex h-6 w-6 items-center justify-center rounded border border-[var(--slack-border)] bg-[var(--slack-main-bg)] text-[var(--slack-text-muted)] opacity-35">
+              <ChevronLeft className="h-3.5 w-3.5" />
+            </span>
+            <span className="inline-flex h-6 w-6 items-center justify-center rounded border border-[var(--slack-border)] bg-[var(--slack-main-bg)] text-[var(--slack-text-muted)] opacity-35">
+              <ChevronRight className="h-3.5 w-3.5" />
+            </span>
+          </div>
+        </div>
+      ) : detail && detail.years.length > 0 ? (
         <div className="flex items-center justify-between gap-2 border-t border-[var(--slack-border)] bg-[var(--slack-surface-bg)] px-2.5 py-1 sm:hidden">
           <button
             type="button"
             onClick={() => setMobileTimelineOpen((v) => !v)}
-            className="inline-flex items-center gap-1.5 rounded-md border border-[var(--slack-border)] bg-[var(--slack-main-bg)] px-2.5 py-1 text-xs font-medium text-[var(--slack-text)]"
+            className="inline-flex h-7 items-center gap-1.5 rounded-md border border-[var(--slack-border)] bg-[var(--slack-main-bg)] px-2.5 text-xs font-medium text-[var(--slack-text)]"
           >
             <Calendar className="h-3.5 w-3.5 text-[var(--slack-accent)]" />
             <span className="font-mono-code">
@@ -219,7 +282,7 @@ export const ChannelHeader: React.FC<ChannelHeaderProps> = ({
                 detail.previousMonth && onSelectMonth(detail.previousMonth)
               }
               aria-label={t.channelHeader.previousMonth}
-              className="inline-flex items-center rounded border border-[var(--slack-border)] bg-[var(--slack-main-bg)] p-1 text-xs text-[var(--slack-text-muted)] disabled:opacity-35"
+              className="inline-flex h-6 w-6 items-center justify-center rounded border border-[var(--slack-border)] bg-[var(--slack-main-bg)] text-xs text-[var(--slack-text-muted)] disabled:opacity-35"
             >
               <ChevronLeft className="h-3.5 w-3.5" />
             </button>
@@ -228,7 +291,7 @@ export const ChannelHeader: React.FC<ChannelHeaderProps> = ({
               disabled={!detail.nextMonth || loading}
               onClick={() => detail.nextMonth && onSelectMonth(detail.nextMonth)}
               aria-label={t.channelHeader.nextMonth}
-              className="inline-flex items-center rounded border border-[var(--slack-border)] bg-[var(--slack-main-bg)] p-1 text-xs text-[var(--slack-text-muted)] disabled:opacity-35"
+              className="inline-flex h-6 w-6 items-center justify-center rounded border border-[var(--slack-border)] bg-[var(--slack-main-bg)] text-xs text-[var(--slack-text-muted)] disabled:opacity-35"
             >
               <ChevronRight className="h-3.5 w-3.5" />
             </button>
@@ -237,14 +300,14 @@ export const ChannelHeader: React.FC<ChannelHeaderProps> = ({
                 type="button"
                 disabled={loading}
                 onClick={() => onSelectMonth(latestMonth)}
-                className="rounded border border-[var(--slack-border)] bg-[var(--slack-main-bg)] px-2 py-0.5 text-[11px] font-medium text-[var(--slack-link)]"
+                className="inline-flex h-6 items-center rounded border border-[var(--slack-border)] bg-[var(--slack-main-bg)] px-2 text-[11px] font-medium text-[var(--slack-link)]"
               >
                 {t.channelHeader.latest}
               </button>
             )}
           </div>
         </div>
-      )}
+      ) : null}
 
       {/* Mobile expandable Year / Month timeline */}
       {detail && detail.years.length > 0 && mobileTimelineOpen && (
@@ -305,10 +368,51 @@ export const ChannelHeader: React.FC<ChannelHeaderProps> = ({
       )}
 
       {/* Compact single-row Desktop Year / Month timeline navigator */}
-      {detail && detail.years.length > 0 && (
+      {showTimelineSkeleton ? (
+        <div
+          aria-hidden="true"
+          className="hidden items-center justify-between gap-2 border-t border-[var(--slack-border)] bg-[var(--slack-surface-bg)] px-4 py-1 sm:flex"
+        >
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <span className="inline-flex h-6 shrink-0 items-center gap-1.5 rounded-md border border-[var(--slack-border)] bg-[var(--slack-main-bg)] px-2">
+              <Calendar className="h-3 w-3 shrink-0 text-[var(--slack-text-muted)] opacity-40" />
+              <span className="skeleton-block h-3 w-10 rounded" />
+            </span>
+
+            <span className="h-3.5 w-px shrink-0 bg-[var(--slack-border)]" />
+
+            <div className="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
+              {TIMELINE_SKELETON_PILLS.map((pill, idx) => (
+                <span
+                  key={idx}
+                  className="inline-flex h-6 shrink-0 items-center gap-1.5 rounded-full border border-transparent bg-[var(--slack-main-bg)] px-2"
+                >
+                  <span
+                    className="skeleton-block h-2.5 rounded"
+                    style={{ width: pill.label }}
+                  />
+                  <span
+                    className="skeleton-block-strong h-3.5 rounded-full"
+                    style={{ width: pill.count }}
+                  />
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex shrink-0 items-center gap-1">
+            <span className="inline-flex h-6 w-6 items-center justify-center rounded border border-[var(--slack-border)] bg-[var(--slack-main-bg)] text-[var(--slack-text-muted)] opacity-35">
+              <ChevronLeft className="h-3.5 w-3.5" />
+            </span>
+            <span className="inline-flex h-6 w-6 items-center justify-center rounded border border-[var(--slack-border)] bg-[var(--slack-main-bg)] text-[var(--slack-text-muted)] opacity-35">
+              <ChevronRight className="h-3.5 w-3.5" />
+            </span>
+          </div>
+        </div>
+      ) : detail && detail.years.length > 0 ? (
         <div className="hidden items-center justify-between gap-2 border-t border-[var(--slack-border)] bg-[var(--slack-surface-bg)] px-4 py-1 sm:flex">
           <div className="flex min-w-0 flex-1 items-center gap-2">
-            <label className="inline-flex shrink-0 items-center gap-1 rounded-md border border-[var(--slack-border)] bg-[var(--slack-main-bg)] px-2 py-0.5 text-xs font-semibold text-[var(--slack-text)]">
+            <label className="inline-flex h-6 shrink-0 items-center gap-1 rounded-md border border-[var(--slack-border)] bg-[var(--slack-main-bg)] px-2 text-xs font-semibold text-[var(--slack-text)]">
               <Calendar className="h-3 w-3 shrink-0 text-[var(--slack-accent)]" />
               <select
                 aria-label={t.channelHeader.selectYear}
@@ -346,7 +450,7 @@ export const ChannelHeader: React.FC<ChannelHeaderProps> = ({
                       type="button"
                       disabled={loading}
                       onClick={() => onSelectMonth(m.month)}
-                      className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] transition ${
+                      className={`inline-flex h-6 shrink-0 items-center gap-1 rounded-full border px-2 text-[11px] transition ${
                         isCurrent
                           ? 'border-[var(--slack-accent)] bg-[var(--slack-accent)]/12 font-semibold text-[var(--slack-link)]'
                           : 'border-transparent bg-[var(--slack-main-bg)] text-[var(--slack-text-muted)] hover:border-[var(--slack-border)] hover:text-[var(--slack-text)]'
@@ -377,7 +481,7 @@ export const ChannelHeader: React.FC<ChannelHeaderProps> = ({
                   ? `${t.channelHeader.previousMonth}: ${detail.previousMonth}`
                   : t.channelHeader.oldestMonth
               }
-              className="inline-flex items-center rounded border border-[var(--slack-border)] bg-[var(--slack-main-bg)] p-0.5 text-xs text-[var(--slack-text-muted)] hover:text-[var(--slack-text)] disabled:opacity-35"
+              className="inline-flex h-6 w-6 items-center justify-center rounded border border-[var(--slack-border)] bg-[var(--slack-main-bg)] text-xs text-[var(--slack-text-muted)] hover:text-[var(--slack-text)] disabled:opacity-35"
             >
               <ChevronLeft className="h-3.5 w-3.5" />
             </button>
@@ -390,7 +494,7 @@ export const ChannelHeader: React.FC<ChannelHeaderProps> = ({
                   ? `${t.channelHeader.nextMonth}: ${detail.nextMonth}`
                   : t.channelHeader.latestMonth
               }
-              className="inline-flex items-center rounded border border-[var(--slack-border)] bg-[var(--slack-main-bg)] p-0.5 text-xs text-[var(--slack-text-muted)] hover:text-[var(--slack-text)] disabled:opacity-35"
+              className="inline-flex h-6 w-6 items-center justify-center rounded border border-[var(--slack-border)] bg-[var(--slack-main-bg)] text-xs text-[var(--slack-text-muted)] hover:text-[var(--slack-text)] disabled:opacity-35"
             >
               <ChevronRight className="h-3.5 w-3.5" />
             </button>
@@ -399,14 +503,14 @@ export const ChannelHeader: React.FC<ChannelHeaderProps> = ({
                 type="button"
                 disabled={loading}
                 onClick={() => onSelectMonth(latestMonth)}
-                className="ml-0.5 rounded border border-[var(--slack-border)] bg-[var(--slack-main-bg)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--slack-link)] hover:bg-[var(--slack-badge-bg)]"
+                className="ml-0.5 inline-flex h-6 items-center rounded border border-[var(--slack-border)] bg-[var(--slack-main-bg)] px-1.5 text-[11px] font-medium text-[var(--slack-link)] hover:bg-[var(--slack-badge-bg)]"
               >
                 {t.channelHeader.latest}
               </button>
             )}
           </div>
         </div>
-      )}
+      ) : null}
     </header>
   );
 };

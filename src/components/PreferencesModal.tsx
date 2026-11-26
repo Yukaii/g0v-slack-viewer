@@ -134,7 +134,7 @@ export const PreferencesModal: React.FC<PreferencesModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/45 px-3 pt-6 backdrop-blur-[1px] sm:items-center sm:p-4"
+      className="fixed inset-0 z-50 flex items-start justify-center bg-black/45 px-3 pt-[calc(1.5rem+var(--pwa-top-inset))] pb-[calc(1rem+var(--safe-bottom))] backdrop-blur-[1px] sm:items-center sm:p-4"
       onClick={onClose}
     >
       <div

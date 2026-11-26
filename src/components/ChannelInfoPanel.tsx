@@ -126,7 +126,7 @@ export const ChannelInfoPanel: React.FC<ChannelInfoPanelProps> = ({
 
   return (
     <aside className="fixed inset-0 z-40 flex h-dvh w-full shrink-0 flex-col border-l border-[var(--slack-border)] bg-[var(--slack-surface-bg)] md:static md:z-auto md:h-full md:w-[340px]">
-      <div className="flex items-center justify-between border-b border-[var(--slack-border)] bg-[var(--slack-main-bg)] px-4 py-3">
+      <div className="flex items-center justify-between border-b border-[var(--slack-border)] bg-[var(--slack-main-bg)] px-4 pt-[calc(0.75rem+var(--pwa-top-inset))] pb-3 md:pt-3">
         <div className="flex min-w-0 items-center gap-1.5 font-bold text-[var(--slack-text)]">
           <button
             type="button"
@@ -214,7 +214,7 @@ export const ChannelInfoPanel: React.FC<ChannelInfoPanelProps> = ({
             </div>
           </div>
 
-          <div className="slack-scroll flex-1 overflow-y-auto p-2">
+          <div className="slack-scroll flex-1 overflow-y-auto px-2 pt-2 pb-[calc(0.5rem+var(--safe-bottom))] md:pb-2">
             {participants.length === 0 ? (
               <p className="px-2 py-8 text-center text-xs text-[var(--slack-text-muted)]">
                 {t.channelInfo.noMembersYet}
@@ -284,7 +284,7 @@ export const ChannelInfoPanel: React.FC<ChannelInfoPanelProps> = ({
           </div>
         </div>
       ) : (
-        <div className="slack-scroll flex-1 space-y-4 overflow-y-auto p-4 text-sm">
+        <div className="slack-scroll flex-1 space-y-4 overflow-y-auto px-4 pt-4 pb-[calc(1rem+var(--safe-bottom))] text-sm md:pb-4">
           {/* Topic */}
           <div className="rounded-xl border border-[var(--slack-border)] bg-[var(--slack-main-bg)] p-3.5">
             <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-[var(--slack-text-muted)]">

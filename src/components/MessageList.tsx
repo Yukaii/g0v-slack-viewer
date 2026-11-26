@@ -688,7 +688,7 @@ export const MessageList: React.FC<MessageListProps> = ({
         )}
 
         {/* Bottom infinite-load sentinel / control */}
-        <div className="flex items-center justify-center pt-4 pb-2">
+        <div className="flex items-center justify-center pt-4 pb-[calc(0.5rem+var(--safe-bottom))]">
           {bottomLoading ? (
             <div className="inline-flex items-center gap-2 rounded-full border border-[var(--slack-border)] bg-[var(--slack-surface-bg)] px-3.5 py-1 text-xs text-[var(--slack-text-muted)]">
               <Loader2 className="h-3.5 w-3.5 animate-spin text-[var(--slack-accent)]" />

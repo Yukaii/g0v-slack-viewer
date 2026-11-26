@@ -34,7 +34,7 @@ export const ImageLightbox: React.FC<ImageLightboxProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-xs"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4 pt-[calc(1rem+var(--pwa-top-inset))] pb-[calc(1rem+var(--safe-bottom))] backdrop-blur-xs"
       onClick={onClose}
     >
       <div

@@ -333,7 +333,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const sidebarContent = (
     <div className="flex h-full w-full flex-col bg-[var(--slack-sidebar-bg)] text-[var(--slack-sidebar-text)] select-none">
       {/* Workspace Header */}
-      <div className="flex items-center justify-between border-b border-[var(--slack-sidebar-border)] px-4 py-3">
+      <div className="flex items-center justify-between border-b border-[var(--slack-sidebar-border)] px-4 pt-[calc(0.75rem+var(--pwa-top-inset))] pb-3 lg:pt-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2.5">
             <G0vLogo variant="icon" size="md" />
@@ -611,7 +611,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       )}
 
       {/* Mobile footer utilities (Theme + Language + GitHub + Archive) */}
-      <div className="flex items-center justify-between gap-1 border-t border-[var(--slack-sidebar-border)] px-2.5 py-2 text-xs lg:hidden">
+      <div className="flex items-center justify-between gap-1 border-t border-[var(--slack-sidebar-border)] px-2.5 pt-2 pb-[calc(0.5rem+var(--safe-bottom))] text-xs lg:hidden">
         <div className="flex min-w-0 items-center gap-1">
           <button
             type="button"

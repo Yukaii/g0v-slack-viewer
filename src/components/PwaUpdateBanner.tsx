@@ -98,7 +98,7 @@ export const PwaUpdateBanner: React.FC = () => {
     <div
       role="status"
       aria-live="polite"
-      className="fixed right-4 bottom-4 left-4 z-50 mx-auto flex max-w-md items-center gap-3 rounded-xl border border-[var(--slack-border)] bg-[var(--slack-main-bg)] px-3.5 py-2.5 text-[var(--slack-text)] shadow-xl sm:left-auto sm:mx-0"
+      className="fixed right-4 bottom-[calc(1rem+var(--safe-bottom))] left-4 z-50 mx-auto flex max-w-md items-center gap-3 rounded-xl border border-[var(--slack-border)] bg-[var(--slack-main-bg)] px-3.5 py-2.5 text-[var(--slack-text)] shadow-xl sm:left-auto sm:mx-0"
     >
       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--slack-accent)]/15 text-[var(--slack-accent)]">
         <RefreshCw className={`h-4 w-4 ${updating ? 'animate-spin' : ''}`} />

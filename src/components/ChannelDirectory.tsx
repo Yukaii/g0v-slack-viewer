@@ -91,7 +91,7 @@ export const ChannelDirectory: React.FC<ChannelDirectoryProps> = ({
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-[var(--slack-main-bg)]">
       {/* Header */}
-      <div className="border-b border-[var(--slack-border)] px-3 py-2 sm:px-4 sm:py-2.5">
+      <div className="border-b border-[var(--slack-border)] px-3 pt-[calc(0.5rem+var(--pwa-top-inset))] pb-2 sm:px-4 sm:py-2.5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <button
@@ -197,7 +197,7 @@ export const ChannelDirectory: React.FC<ChannelDirectoryProps> = ({
       </div>
 
       {/* Channel List */}
-      <div className="slack-scroll min-h-0 flex-1 overflow-y-auto divide-y divide-[var(--slack-border)]">
+      <div className="slack-scroll min-h-0 flex-1 overflow-y-auto divide-y divide-[var(--slack-border)] pb-[var(--safe-bottom)]">
         {channelsLoading && channels.length === 0 ? (
           <div
             role="status"

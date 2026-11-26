@@ -90,7 +90,7 @@ export const ChannelHeader: React.FC<ChannelHeaderProps> = ({
   const showTimelineSkeleton = !detail && loading;
 
   return (
-    <header className="shrink-0 border-b border-[var(--slack-border)] bg-[var(--slack-main-bg)]">
+    <header className="shrink-0 border-b border-[var(--slack-border)] bg-[var(--slack-main-bg)] pt-[var(--pwa-top-inset)] sm:pt-0">
       {/* Main header row */}
       <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 sm:gap-3 sm:px-4 sm:py-1.5">
         <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">

@@ -35,7 +35,7 @@ export const ThreadPanel: React.FC<ThreadPanelProps> = ({
   return (
     <aside className="fixed inset-0 z-40 flex h-dvh w-full shrink-0 flex-col border-l border-[var(--slack-border)] bg-[var(--slack-main-bg)] md:static md:z-auto md:h-full md:w-[380px] lg:w-[420px]">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-[var(--slack-border)] px-4 py-3">
+      <div className="flex items-center justify-between border-b border-[var(--slack-border)] px-4 pt-[calc(0.75rem+var(--pwa-top-inset))] pb-3 md:pt-3">
         <div className="flex min-w-0 items-center gap-2">
           <button
             type="button"
@@ -66,7 +66,7 @@ export const ThreadPanel: React.FC<ThreadPanelProps> = ({
       </div>
 
       {/* Scrollable body */}
-      <div className="slack-scroll flex-1 overflow-y-auto py-3">
+      <div className="slack-scroll flex-1 overflow-y-auto pt-3 pb-[calc(0.75rem+var(--safe-bottom))] md:pb-3">
         {/* Root message */}
         <MessageItem
           message={{ ...message, replies: [] }}

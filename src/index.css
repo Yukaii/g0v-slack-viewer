@@ -1,8 +1,19 @@
 @import "tailwindcss";
 
+/* Safe-area & PWA top-edge tokens (kept on :root so media queries override cleanly) */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --pwa-top-inset: var(--safe-top);
+  --pwa-top-surface: var(--slack-main-bg);
+}
+
 /* Default main experience: g0v Civic (Light) */
 :root,
 html[data-theme="g0v-light"] {
+  color-scheme: light;
   --slack-sidebar-bg: #18181b;
   --slack-sidebar-hover: #27272a;
   --slack-sidebar-active: #c8161d;
@@ -31,6 +42,7 @@ html[data-theme="g0v-light"] {
 /* g0v Night (Dark hacker mode) */
 html[data-theme="g0v-dark"],
 html.dark {
+  color-scheme: dark;
   --slack-sidebar-bg: #111114;
   --slack-sidebar-hover: #1e1e24;
   --slack-sidebar-active: #c8161d;
@@ -58,6 +70,7 @@ html.dark {
 
 /* g0v Jothon (Summit jade & warm civic paper) */
 html[data-theme="g0v-jothon"] {
+  color-scheme: light;
   --slack-sidebar-bg: #0f292e;
   --slack-sidebar-hover: #173a40;
   --slack-sidebar-active: #c8161d;
@@ -85,6 +98,7 @@ html[data-theme="g0v-jothon"] {
 
 /* Slack Classic (Optional traditional purple) */
 html[data-theme="slack-classic"] {
+  color-scheme: light;
   --slack-sidebar-bg: #3f0e40;
   --slack-sidebar-hover: #350d36;
   --slack-sidebar-active: #1164a3;
@@ -110,6 +124,27 @@ html[data-theme="slack-classic"] {
   --slack-sidebar-skeleton-subtle: rgba(255, 255, 255, 0.09);
 }
 
+@media (min-width: 640px) {
+  :root {
+    --pwa-top-surface: var(--slack-top-bg);
+  }
+}
+
+/* iOS/iPadOS 26-27 standalone PWA portrait top-blur workaround */
+@media (orientation: portrait) {
+  html.ios-standalone {
+    --pwa-top-inset: max(env(safe-area-inset-top, 0px), 10px);
+  }
+}
+
+@media (display-mode: standalone) and (orientation: portrait) {
+  @supports (-webkit-touch-callout: none) {
+    :root {
+      --pwa-top-inset: max(env(safe-area-inset-top, 0px), 10px);
+    }
+  }
+}
+
 html,
 body,
 #root {
@@ -119,9 +154,66 @@ body,
   margin: 0;
   font-family: 'Inter', 'Noto Sans TC', -apple-system, BlinkMacSystemFont,
     'Segoe UI', Roboto, sans-serif;
-  background-color: var(--slack-main-bg);
+  background-color: var(--pwa-top-surface);
   color: var(--slack-text);
   -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  background-color: var(--slack-main-bg);
+}
+
+/* Real fixed opaque top-edge cap so WebKit's scroll-edge sampler anchors a solid
+   top bar color instead of washing a blurred overlay across the header. */
+.ios-pwa-top-cap {
+  display: none;
+}
+
+html.ios-standalone .ios-pwa-top-cap {
+  display: block;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--pwa-top-inset);
+  background-color: var(--pwa-top-surface);
+  pointer-events: none;
+  z-index: 30;
+  transform: translateZ(0);
+}
+
+@media (display-mode: standalone) {
+  @supports (-webkit-touch-callout: none) {
+    .ios-pwa-top-cap {
+      display: block;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: var(--pwa-top-inset);
+      background-color: var(--pwa-top-surface);
+      pointer-events: none;
+      z-index: 30;
+      transform: translateZ(0);
+    }
+  }
+}
+
+/* Transient root-scrollability during the 1-frame scroll nudge that clears
+   iOS 27's stuck initial portrait top blur without shifting visible UI. */
+html.ios-pwa-scroll-nudge,
+html.ios-pwa-scroll-nudge body {
+  height: auto;
+  min-height: calc(100dvh + 2px);
+  overflow-y: auto;
+}
+
+html.ios-pwa-scroll-nudge #root {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100dvh;
+  overflow: hidden;
 }
 
 .font-mono-code {

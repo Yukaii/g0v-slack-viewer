@@ -66,6 +66,7 @@ import { LanguagePicker } from './components/LanguagePicker';
 import { ThemePicker } from './components/ThemePicker';
 import { PreferencesModal } from './components/PreferencesModal';
 import { PwaUpdateBanner } from './components/PwaUpdateBanner';
+import { useIosPwaBlurWorkaround } from './hooks/useIosPwaBlurWorkaround';
 import { usePwaInstall } from './hooks/usePwaInstall';
 import { APP_THEMES, getThemeMeta, type AppThemeId } from './utils/themes';
 
@@ -214,6 +215,7 @@ export const App: React.FC = () => {
   const [previewFile, setPreviewFile] = useState<MessageFile | null>(null);
   const { canInstall: canInstallPwa, promptInstall: handleInstallPwa } =
     usePwaInstall();
+  useIosPwaBlurWorkaround();
 
   const quickSwitcherLabel = useMemo(
     () => formatKeyBinding(shortcuts.quickSwitcher),
@@ -285,7 +287,7 @@ export const App: React.FC = () => {
     });
   }, []);
 
-  // Apply data-theme attribute, dark class, and PWA theme-color meta tag
+  // Apply data-theme attribute, dark class, and responsive PWA theme-color meta tag
   useEffect(() => {
     const root = document.documentElement;
     const meta = getThemeMeta(theme);
@@ -295,13 +297,24 @@ export const App: React.FC = () => {
     } else {
       root.classList.remove('dark');
     }
-    const themeColorMeta = document.querySelector<HTMLMetaElement>(
-      'meta[name="theme-color"]'
-    );
-    if (themeColorMeta) {
-      themeColorMeta.content = meta.themeColor;
-    }
     saveTheme(theme);
+
+    const smQuery = window.matchMedia?.('(min-width: 640px)');
+    const syncThemeColor = () => {
+      const themeColorMeta = document.querySelector<HTMLMetaElement>(
+        'meta[name="theme-color"]'
+      );
+      if (!themeColorMeta) return;
+      // On < 640px the dark workspace top bar is hidden and ChannelHeader sits at y=0
+      const hasDesktopTopBar = smQuery ? smQuery.matches : window.innerWidth >= 640;
+      themeColorMeta.content = hasDesktopTopBar ? meta.themeColor : meta.swatchBg;
+    };
+
+    syncThemeColor();
+    smQuery?.addEventListener('change', syncThemeColor);
+    return () => {
+      smQuery?.removeEventListener('change', syncThemeColor);
+    };
   }, [theme]);
 
   const openPalette = useCallback((mode: PaletteMode) => {
@@ -803,8 +816,12 @@ export const App: React.FC = () => {
   return (
     <ChannelMapProvider channels={channels}>
     <div className="flex h-dvh w-full max-w-full flex-col overflow-hidden bg-[var(--slack-main-bg)] text-[var(--slack-text)]">
+      {/* Real fixed opaque top cap for iOS 26/27 standalone PWA scroll-edge sampling */}
+      <div className="ios-pwa-top-cap" aria-hidden="true" />
+
       {/* Top Slack Workspace Bar */}
-      <div className="hidden h-9 shrink-0 items-center justify-between gap-3 border-b-2 border-[var(--g0v-brand-accent)] bg-[var(--slack-top-bg)] px-3 text-white sm:flex">
+      <div className="hidden shrink-0 border-b-2 border-[var(--g0v-brand-accent)] bg-[var(--slack-top-bg)] pt-[var(--pwa-top-inset)] text-white sm:block">
+        <div className="flex h-9 items-center justify-between gap-3 pr-[max(0.75rem,var(--safe-right))] pl-[max(0.75rem,var(--safe-left))]">
         <div className="hidden shrink-0 items-center gap-2 text-xs text-white/75 md:flex">
           <G0vLogo variant="wordmark" size="sm" />
           <span className="whitespace-nowrap font-semibold tracking-tight text-white">
@@ -879,6 +896,7 @@ export const App: React.FC = () => {
             <Archive className="h-3.5 w-3.5" />
             <ExternalLink className="h-2.5 w-2.5 opacity-70" />
           </a>
+        </div>
         </div>
       </div>
 

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   AlertCircle,
   Archive,
+  Download,
   ExternalLink,
   Keyboard,
   Loader2,
@@ -64,6 +65,8 @@ import { G0vLogo } from './components/G0vLogo';
 import { LanguagePicker } from './components/LanguagePicker';
 import { ThemePicker } from './components/ThemePicker';
 import { PreferencesModal } from './components/PreferencesModal';
+import { PwaUpdateBanner } from './components/PwaUpdateBanner';
+import { usePwaInstall } from './hooks/usePwaInstall';
 import { APP_THEMES, getThemeMeta, type AppThemeId } from './utils/themes';
 
 const DEFAULT_CHANNEL_ID = 'C02G2SXKX'; // #general
@@ -209,6 +212,8 @@ export const App: React.FC = () => {
     loadSidebarWidth()
   );
   const [previewFile, setPreviewFile] = useState<MessageFile | null>(null);
+  const { canInstall: canInstallPwa, promptInstall: handleInstallPwa } =
+    usePwaInstall();
 
   const quickSwitcherLabel = useMemo(
     () => formatKeyBinding(shortcuts.quickSwitcher),
@@ -280,7 +285,7 @@ export const App: React.FC = () => {
     });
   }, []);
 
-  // Apply data-theme attribute and dark class to <html>
+  // Apply data-theme attribute, dark class, and PWA theme-color meta tag
   useEffect(() => {
     const root = document.documentElement;
     const meta = getThemeMeta(theme);
@@ -289,6 +294,12 @@ export const App: React.FC = () => {
       root.classList.add('dark');
     } else {
       root.classList.remove('dark');
+    }
+    const themeColorMeta = document.querySelector<HTMLMetaElement>(
+      'meta[name="theme-color"]'
+    );
+    if (themeColorMeta) {
+      themeColorMeta.content = meta.themeColor;
     }
     saveTheme(theme);
   }, [theme]);
@@ -822,6 +833,18 @@ export const App: React.FC = () => {
 
         {/* Right utility controls */}
         <div className="flex shrink-0 items-center gap-1">
+          {canInstallPwa && (
+            <button
+              type="button"
+              onClick={() => void handleInstallPwa()}
+              title={t.pwa.installAppTitle}
+              aria-label={t.pwa.installAppTitle}
+              className="inline-flex h-6 items-center gap-1 rounded-md border border-white/20 bg-[var(--g0v-brand-accent)]/90 px-2 text-xs font-medium text-white transition hover:bg-[var(--g0v-brand-accent)]"
+            >
+              <Download className="h-3 w-3 shrink-0" />
+              <span className="hidden xl:inline">{t.pwa.installApp}</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setPreferencesOpen(true)}
@@ -884,6 +907,8 @@ export const App: React.FC = () => {
           onOpenSearch={openSearch}
           theme={theme}
           onToggleTheme={cycleTheme}
+          canInstallPwa={canInstallPwa}
+          onInstallPwa={() => void handleInstallPwa()}
         />
 
         {/* Center Pane */}
@@ -1061,6 +1086,8 @@ export const App: React.FC = () => {
         file={previewFile}
         onClose={() => setPreviewFile(null)}
       />
+
+      <PwaUpdateBanner />
     </div>
     </ChannelMapProvider>
   );

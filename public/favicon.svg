@@ -1,11 +1,54 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="152 -24 301 301">
-  <rect x="152" y="-24" width="301" height="301" rx="64" fill="#ffffff" />
-  <path
-    fill="#C60000"
-    d="M414,2.5h-29.6L191,249.5h30.1L414,2.5z"
-  />
-  <path
-    fill="#000000"
-    d="M370.1,89.3c-9.7-9.8-28.4-18.8-69.6-18.8c-39.6,0-59.8,8.8-69.7,18.8c-9,9.1-13.9,20.4-13.9,37.2s4.9,28,13.9,37.1c9.7,9.8,29.3,18.9,69.7,18.9s59.8-8.9,69.6-18.8c9-9.1,13.9-20.4,13.9-37.2C384,109.5,379.1,98.4,370.1,89.3z M300.6,158.5c-26.3,0-40-5.5-45.8-11.3c-4.5-4.6-7.8-10.5-7.8-21.7s2.8-17.2,7.6-22.1c6-6,19.6-10.9,46-10.9s39.5,5,45.7,11.2c4.8,4.9,7.8,10.6,7.8,21.8s-2.8,17.2-7.6,22.1C340.2,153.8,326.9,158.5,300.6,158.5z"
-  />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="paper-bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#faf8f4" />
+      <stop offset="100%" stop-color="#ece8df" />
+    </linearGradient>
+    <filter id="card-shadow" x="-10%" y="-10%" width="120%" height="125%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#18181b" flood-opacity="0.14" />
+    </filter>
+  </defs>
+
+  <!-- Rounded warm civic-paper tile -->
+  <rect x="0" y="0" width="512" height="512" rx="112" fill="url(#paper-bg)" />
+
+  <!-- Archive Folder Composition -->
+  <g>
+    <!-- Rear archive folder silhouette (classic top-left tab, tucked cleanly behind right edge) -->
+    <path
+      d="M84 68 h106 a24 24 0 0 1 24 24 v24 h210 a12 12 0 0 1 12 12 v266 a28 28 0 0 1-28 28 H92 a28 28 0 0 1-28-28 V92 a24 24 0 0 1 20-24 z"
+      fill="#d8d3c6"
+    />
+
+    <!-- Four Slack-colored archive index divider tabs -->
+    <rect x="104" y="84" width="74" height="44" rx="14" fill="#36C5F0" />
+    <rect x="184" y="84" width="74" height="44" rx="14" fill="#2EB67D" />
+    <rect x="264" y="84" width="74" height="44" rx="14" fill="#ECB22E" />
+    <rect x="344" y="84" width="74" height="44" rx="14" fill="#C60000" />
+
+    <!-- Crisp white front archive folder card -->
+    <rect
+      x="76"
+      y="112"
+      width="364"
+      height="324"
+      rx="30"
+      fill="#ffffff"
+      filter="url(#card-shadow)"
+    />
+
+    <!-- Official g0v slashed zero centered on the front archive card -->
+    <g transform="translate(258 276) scale(1.24) translate(-302.5 -126)">
+      <!-- Official g0v crimson slash -->
+      <path
+        fill="#C60000"
+        d="M414,2.5h-29.6L191,249.5h30.1L414,2.5z"
+      />
+      <!-- Official g0v bold carbon-ink 0 on top -->
+      <path
+        fill="#141418"
+        d="M370.1,89.3c-9.7-9.8-28.4-18.8-69.6-18.8c-39.6,0-59.8,8.8-69.7,18.8c-9,9.1-13.9,20.4-13.9,37.2s4.9,28,13.9,37.1c9.7,9.8,29.3,18.9,69.7,18.9s59.8-8.9,69.6-18.8c9-9.1,13.9-20.4,13.9-37.2C384,109.5,379.1,98.4,370.1,89.3z M300.6,158.5c-26.3,0-40-5.5-45.8-11.3c-4.5-4.6-7.8-10.5-7.8-21.7s2.8-17.2,7.6-22.1c6-6,19.6-10.9,46-10.9s39.5,5,45.7,11.2c4.8,4.9,7.8,10.6,7.8,21.8s-2.8,17.2-7.6,22.1C340.2,153.8,326.9,158.5,300.6,158.5z"
+      />
+    </g>
+  </g>
 </svg>

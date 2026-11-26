@@ -3,6 +3,7 @@ import {
   ChevronDown,
   ChevronRight,
   Compass,
+  Download,
   ExternalLink,
   Hash,
   Languages,
@@ -46,6 +47,8 @@ interface SidebarProps {
   onOpenSearch: () => void;
   theme: AppThemeId;
   onToggleTheme: () => void;
+  canInstallPwa?: boolean;
+  onInstallPwa?: () => void;
 }
 
 const SIDEBAR_SKELETON_WIDTHS: Array<{ name: string; count: string }> = [
@@ -92,6 +95,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenSearch,
   theme,
   onToggleTheme,
+  canInstallPwa = false,
+  onInstallPwa,
 }) => {
   const { t, toggleLocale } = useI18n();
   const fallbackShortcutLabel = useMemo(() => getCommandShortcutLabel(), []);
@@ -587,6 +592,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
         </div>
       </div>
+
+      {/* Optional PWA Install CTA (mobile / tablet when browser supports install prompt) */}
+      {canInstallPwa && onInstallPwa && (
+        <div className="border-t border-[var(--slack-sidebar-border)] px-2.5 py-2 lg:hidden">
+          <button
+            type="button"
+            onClick={() => {
+              onInstallPwa();
+              onCloseMobile();
+            }}
+            className="flex w-full items-center justify-center gap-1.5 rounded-md bg-[var(--g0v-brand-accent)] px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90"
+          >
+            <Download className="h-3.5 w-3.5 shrink-0" />
+            <span>{t.pwa.installApp}</span>
+          </button>
+        </div>
+      )}
 
       {/* Mobile footer utilities (Theme + Language + GitHub + Archive) */}
       <div className="flex items-center justify-between gap-1 border-t border-[var(--slack-sidebar-border)] px-2.5 py-2 text-xs lg:hidden">

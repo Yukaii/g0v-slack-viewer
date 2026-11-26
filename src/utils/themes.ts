@@ -5,6 +5,7 @@ export interface AppThemeMeta {
   name: string;
   subtitle: string;
   isDark: boolean;
+  themeColor: string;
   swatchSidebar: string;
   swatchAccent: string;
   swatchBg: string;
@@ -16,6 +17,7 @@ export const APP_THEMES: AppThemeMeta[] = [
     name: 'g0v Civic',
     subtitle: 'Carbon ink & g0v crimson',
     isDark: false,
+    themeColor: '#111113',
     swatchSidebar: '#18181b',
     swatchAccent: '#c8161d',
     swatchBg: '#ffffff',
@@ -25,6 +27,7 @@ export const APP_THEMES: AppThemeMeta[] = [
     name: 'g0v Night',
     subtitle: 'Obsidian hacker dark mode',
     isDark: true,
+    themeColor: '#09090b',
     swatchSidebar: '#111114',
     swatchAccent: '#ef4444',
     swatchBg: '#16161a',
@@ -34,6 +37,7 @@ export const APP_THEMES: AppThemeMeta[] = [
     name: 'g0v Jothon',
     subtitle: 'Summit jade & warm paper',
     isDark: false,
+    themeColor: '#0b1f23',
     swatchSidebar: '#0f292e',
     swatchAccent: '#c8161d',
     swatchBg: '#faf8f4',
@@ -43,6 +47,7 @@ export const APP_THEMES: AppThemeMeta[] = [
     name: 'Slack Classic',
     subtitle: 'Traditional aubergine & blue',
     isDark: false,
+    themeColor: '#350d36',
     swatchSidebar: '#3f0e40',
     swatchAccent: '#1164a3',
     swatchBg: '#ffffff',

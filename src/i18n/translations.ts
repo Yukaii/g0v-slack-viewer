@@ -237,6 +237,15 @@ export interface Translations {
     failedLoadChannel: string;
     retry: string;
   };
+  pwa: {
+    installApp: string;
+    installAppTitle: string;
+    updateAvailableTitle: string;
+    updateAvailableDesc: string;
+    updateNow: string;
+    updating: string;
+    later: string;
+  };
 }
 
 export const zhTW: Translations = {
@@ -510,6 +519,15 @@ export const zhTW: Translations = {
     loading: '載入中…',
     failedLoadChannel: '無法載入頻道',
     retry: '重試',
+  },
+  pwa: {
+    installApp: '安裝應用程式',
+    installAppTitle: '將 g0v Slack 封存檢視器安裝為桌面／行動裝置應用程式',
+    updateAvailableTitle: '有新版本可用',
+    updateAvailableDesc: '重新載入即可套用最新功能與修正。',
+    updateNow: '立即更新',
+    updating: '更新中…',
+    later: '稍後再說',
   },
 };
 
@@ -787,6 +805,15 @@ export const en: Translations = {
     failedLoadChannel: 'Failed to load channel',
     retry: 'Retry',
   },
+  pwa: {
+    installApp: 'Install app',
+    installAppTitle: 'Install g0v Slack Viewer as an app',
+    updateAvailableTitle: 'New version available',
+    updateAvailableDesc: 'Reload to apply the latest updates and fixes.',
+    updateNow: 'Update now',
+    updating: 'Updating...',
+    later: 'Later',
+  },
 };
 
 export const ja: Translations = {
@@ -1062,6 +1089,15 @@ export const ja: Translations = {
     loading: '読み込み中…',
     failedLoadChannel: 'チャンネルを読み込めませんでした',
     retry: '再試行',
+  },
+  pwa: {
+    installApp: 'アプリをインストール',
+    installAppTitle: 'g0v Slack ビューアをアプリとしてインストール',
+    updateAvailableTitle: '新しいバージョンがあります',
+    updateAvailableDesc: '再読み込みして最新のアップデートを適用します。',
+    updateNow: '今すぐ更新',
+    updating: '更新中…',
+    later: 'あとで',
   },
 };
 

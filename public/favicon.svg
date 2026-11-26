@@ -7,9 +7,6 @@
     <filter id="card-shadow" x="-10%" y="-10%" width="120%" height="125%">
       <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#18181b" flood-opacity="0.14" />
     </filter>
-    <clipPath id="slash-clip">
-      <path d="M414,2.5h-29.6L191,249.5h30.1L414,2.5z" />
-    </clipPath>
   </defs>
 
   <!-- Rounded warm civic-paper tile -->
@@ -42,22 +39,11 @@
 
     <!-- Official g0v slashed zero centered on the front archive card -->
     <g transform="translate(258 276) scale(1.24) translate(-302.5 -126)">
-      <!-- Base official g0v crimson slash -->
+      <!-- Official g0v crimson slash -->
       <path
         fill="#C60000"
         d="M414,2.5h-29.6L191,249.5h30.1L414,2.5z"
       />
-      <!-- Balanced Slack 4-color prism overlay aligned to the slash centerline inside the 0 -->
-      <g clip-path="url(#slash-clip)">
-        <!-- Upper-left half of slash inside 0 -->
-        <polygon points="240,86 334,86 302.6,126 240,126" fill="#36C5F0" />
-        <!-- Upper-right half of slash inside 0 -->
-        <polygon points="334,86 370,86 370,126 302.6,126" fill="#ECB22E" />
-        <!-- Lower-left half of slash inside 0 -->
-        <polygon points="240,126 302.6,126 271.2,166 240,166" fill="#2EB67D" />
-        <!-- Lower-right half of slash inside 0 -->
-        <polygon points="302.6,126 370,126 370,166 271.2,166" fill="#E01E5A" />
-      </g>
       <!-- Official g0v bold carbon-ink 0 on top -->
       <path
         fill="#141418"

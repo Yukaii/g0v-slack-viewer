@@ -1,47 +1,68 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#25252b" />
-      <stop offset="100%" stop-color="#141418" />
+    <linearGradient id="paper-bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#faf8f4" />
+      <stop offset="100%" stop-color="#ece8df" />
     </linearGradient>
-    <g id="slack-arm">
-      <!-- Horizontal pill -->
-      <rect x="52" y="176" width="176" height="60" rx="30" />
-      <!-- Companion teardrop dot (bottom-right corner sharp) -->
-      <path d="M198 88a30 30 0 0 0-30 30v0a30 30 0 0 0 30 30h30v-30a30 30 0 0 0-30-30z" />
-    </g>
+    <filter id="card-shadow" x="-10%" y="-10%" width="120%" height="125%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#18181b" flood-opacity="0.14" />
+    </filter>
+    <clipPath id="slash-clip">
+      <path d="M414,2.5h-29.6L191,249.5h30.1L414,2.5z" />
+    </clipPath>
   </defs>
 
-  <!-- Rounded dark carbon app tile -->
-  <rect x="0" y="0" width="512" height="512" rx="112" fill="url(#bg)" />
+  <!-- Rounded warm civic-paper tile -->
+  <rect x="0" y="0" width="512" height="512" rx="112" fill="url(#paper-bg)" />
 
-  <!-- Slack-inspired 4-quadrant pinwheel (#) -->
-  <use href="#slack-arm" fill="#36C5F0" />
-  <use href="#slack-arm" fill="#2EB67D" transform="rotate(90 256 256)" />
-  <use href="#slack-arm" fill="#ECB22E" transform="rotate(180 256 256)" />
-  <use href="#slack-arm" fill="#D91E26" transform="rotate(270 256 256)" />
-
-  <!-- Central g0v emblem cutout + white squircle -->
-  <rect
-    x="160"
-    y="160"
-    width="192"
-    height="192"
-    rx="46"
-    fill="#ffffff"
-    stroke="#18181b"
-    stroke-width="18"
-  />
-
-  <!-- Official g0v slashed zero centered at (256, 256) -->
-  <g transform="translate(256 256) scale(0.62) translate(-302.5 -126)">
+  <!-- Archive Folder Composition -->
+  <g>
+    <!-- Rear archive folder silhouette (classic top-left tab, tucked cleanly behind right edge) -->
     <path
-      fill="#C60000"
-      d="M414,2.5h-29.6L191,249.5h30.1L414,2.5z"
+      d="M84 68 h106 a24 24 0 0 1 24 24 v24 h210 a12 12 0 0 1 12 12 v266 a28 28 0 0 1-28 28 H92 a28 28 0 0 1-28-28 V92 a24 24 0 0 1 20-24 z"
+      fill="#d8d3c6"
     />
-    <path
-      fill="#111113"
-      d="M370.1,89.3c-9.7-9.8-28.4-18.8-69.6-18.8c-39.6,0-59.8,8.8-69.7,18.8c-9,9.1-13.9,20.4-13.9,37.2s4.9,28,13.9,37.1c9.7,9.8,29.3,18.9,69.7,18.9s59.8-8.9,69.6-18.8c9-9.1,13.9-20.4,13.9-37.2C384,109.5,379.1,98.4,370.1,89.3z M300.6,158.5c-26.3,0-40-5.5-45.8-11.3c-4.5-4.6-7.8-10.5-7.8-21.7s2.8-17.2,7.6-22.1c6-6,19.6-10.9,46-10.9s39.5,5,45.7,11.2c4.8,4.9,7.8,10.6,7.8,21.8s-2.8,17.2-7.6,22.1C340.2,153.8,326.9,158.5,300.6,158.5z"
+
+    <!-- Four Slack-colored archive index divider tabs -->
+    <rect x="104" y="84" width="74" height="44" rx="14" fill="#36C5F0" />
+    <rect x="184" y="84" width="74" height="44" rx="14" fill="#2EB67D" />
+    <rect x="264" y="84" width="74" height="44" rx="14" fill="#ECB22E" />
+    <rect x="344" y="84" width="74" height="44" rx="14" fill="#C60000" />
+
+    <!-- Crisp white front archive folder card -->
+    <rect
+      x="76"
+      y="112"
+      width="364"
+      height="324"
+      rx="30"
+      fill="#ffffff"
+      filter="url(#card-shadow)"
     />
+
+    <!-- Official g0v slashed zero centered on the front archive card -->
+    <g transform="translate(258 276) scale(1.24) translate(-302.5 -126)">
+      <!-- Base official g0v crimson slash -->
+      <path
+        fill="#C60000"
+        d="M414,2.5h-29.6L191,249.5h30.1L414,2.5z"
+      />
+      <!-- Balanced Slack 4-color prism overlay aligned to the slash centerline inside the 0 -->
+      <g clip-path="url(#slash-clip)">
+        <!-- Upper-left half of slash inside 0 -->
+        <polygon points="240,86 334,86 302.6,126 240,126" fill="#36C5F0" />
+        <!-- Upper-right half of slash inside 0 -->
+        <polygon points="334,86 370,86 370,126 302.6,126" fill="#ECB22E" />
+        <!-- Lower-left half of slash inside 0 -->
+        <polygon points="240,126 302.6,126 271.2,166 240,166" fill="#2EB67D" />
+        <!-- Lower-right half of slash inside 0 -->
+        <polygon points="302.6,126 370,126 370,166 271.2,166" fill="#E01E5A" />
+      </g>
+      <!-- Official g0v bold carbon-ink 0 on top -->
+      <path
+        fill="#141418"
+        d="M370.1,89.3c-9.7-9.8-28.4-18.8-69.6-18.8c-39.6,0-59.8,8.8-69.7,18.8c-9,9.1-13.9,20.4-13.9,37.2s4.9,28,13.9,37.1c9.7,9.8,29.3,18.9,69.7,18.9s59.8-8.9,69.6-18.8c9-9.1,13.9-20.4,13.9-37.2C384,109.5,379.1,98.4,370.1,89.3z M300.6,158.5c-26.3,0-40-5.5-45.8-11.3c-4.5-4.6-7.8-10.5-7.8-21.7s2.8-17.2,7.6-22.1c6-6,19.6-10.9,46-10.9s39.5,5,45.7,11.2c4.8,4.9,7.8,10.6,7.8,21.8s-2.8,17.2-7.6,22.1C340.2,153.8,326.9,158.5,300.6,158.5z"
+      />
+    </g>
   </g>
 </svg>
